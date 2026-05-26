@@ -306,12 +306,16 @@ function toggleMute() {
 
 function initAudio() {
     if (audioCtx) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    ambientOsc = audioCtx.createOscillator();
-    ambientGain = audioCtx.createGain();
-    ambientOsc.type = 'sawtooth'; ambientOsc.frequency.value = 40; ambientGain.gain.value = 0.05;
-    ambientOsc.connect(ambientGain); ambientGain.connect(audioCtx.destination); ambientOsc.start();
-    if (isMuted) audioCtx.suspend();
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        audioCtx = new Ctx();
+        ambientOsc = audioCtx.createOscillator();
+        ambientGain = audioCtx.createGain();
+        ambientOsc.type = 'sawtooth'; ambientOsc.frequency.value = 40; ambientGain.gain.value = 0.05;
+        ambientOsc.connect(ambientGain); ambientGain.connect(audioCtx.destination); ambientOsc.start();
+        if (isMuted) audioCtx.suspend();
+    } catch(e) { console.warn('Audio failed:', e); audioCtx = null; }
 }
 
 function playSound(type) {
@@ -355,35 +359,22 @@ function transitionTo(targetId, callback) {
 
 // --- ランダムイベントプール ---
 const crystalPoolMaster = [
-    { story: "腐敗した書架の奥、石の祭壇に古い本が開かれている。
-そこには、あなたが目を背けてきた己の罪と醜悪な欲望が克明に記されている。
-『己の影を知れ』と、古い血のインクが浮かび上がった。", choices: [ { text: "冷静に記述を読み解き、己の深層の法則を学ぶ", type: "sage" }, { text: "「こんなものは私ではない」と本を叩き落とし、目を塞ぐ", type: "innocent" }, { text: "忌まわしき罪の記述に、なぜか甘美な魅力を感じる", type: "lover" }, { text: "祭壇ごと本を破壊し、過去の記録を力で隠滅する", type: "outlaw" }] },
-    { story: "知識の残骸が泥のように溶け出した沼に足を踏み入れた。
-底なしの泥が足を絡め取り、自我を溶かそうと精神を蝕んでいく。
-重苦しい腐敗の中で、あなたはどう抗うか。", choices: [ { text: "精神を侵されながらも、強靭な意志で沼を一直線に突破する", type: "hero" }, { text: "自我の摩耗を受け入れつつ、安全な足場を少しずつ探す", type: "everyman" }, { text: "沼の奥に隠された、未知の抜け道がないか探索する", type: "explorer" }, { text: "己の意識を集中させ、泥の浸食を中和する結界を張る", type: "magician" }] },
-    { story: "森の根に締め付けられた鉄の檻。中には、かつての「理想」の残骸が転がっている。
-暗闇から『お前もいずれこうなる』と低く嗤う声が響いた。", choices: [ { text: "残骸の構造を詳細にスケッチし、知識として記録する", type: "sage" }, { text: "嗤い声に向かって武器を構え、恐怖を怒りに変える", type: "outlaw" }, { text: "残骸を悼み、せめてもの慰めとして供物を捧げる", type: "lover" }, { text: "何も聞こえなかったふりをして、足早に檻を立ち去る", type: "innocent" }] },
-    { story: "泥の中から老賢者が姿を現し、燃え盛るランタンの火を差し出した。
-『森は自我を喰らう。火の痛みを引き受け、己を照らす光とせよ』と声がした。", choices: [ { text: "火の粉に怯え、安全な暗がりへと後ずさる", type: "everyman" }, { text: "痛みに耐え、素手で火を掴み己の魂の熱とする", type: "hero" }, { text: "残った火を利用して、自らの道具を打ち直す", type: "creator" }, { text: "火の温もりを、後に続く者への道標として守る", type: "caregiver" }] }
+    { story: "腐敗した書架の奥、石の祭壇に古い本が開かれている。\nそこには、あなたが目を背けてきた己の罪と醜悪な欲望が克明に記されている。\n『己の影を知れ』と、古い血のインクが浮かび上がった。", choices: [ { text: "冷静に記述を読み解き、己の深層の法則を学ぶ", type: "sage" }, { text: "「こんなものは私ではない」と本を叩き落とし、目を塞ぐ", type: "innocent" }, { text: "忌まわしき罪の記述に、なぜか甘美な魅力を感じる", type: "lover" }, { text: "祭壇ごと本を破壊し、過去の記録を力で隠滅する", type: "outlaw" }] },
+    { story: "知識の残骸が泥のように溶け出した沼に足を踏み入れた。\n底なしの泥が足を絡め取り、自我を溶かそうと精神を蝕んでいく。\n重苦しい腐敗の中で、あなたはどう抗うか。", choices: [ { text: "精神を侵されながらも、強靭な意志で沼を一直線に突破する", type: "hero" }, { text: "自我の摩耗を受け入れつつ、安全な足場を少しずつ探す", type: "everyman" }, { text: "沼の奥に隠された、未知の抜け道がないか探索する", type: "explorer" }, { text: "己の意識を集中させ、泥の浸食を中和する結界を張る", type: "magician" }] },
+    { story: "森の根に締め付けられた鉄の檻。中には、かつての「理想」の残骸が転がっている。\n暗闇から『お前もいずれこうなる』と低く嗤う声が響いた。", choices: [ { text: "残骸の構造を詳細にスケッチし、知識として記録する", type: "sage" }, { text: "嗤い声に向かって武器を構え、恐怖を怒りに変える", type: "outlaw" }, { text: "残骸を悼み、せめてもの慰めとして供物を捧げる", type: "lover" }, { text: "何も聞こえなかったふりをして、足早に檻を立ち去る", type: "innocent" }] },
+    { story: "泥の中から老賢者が姿を現し、燃え盛るランタンの火を差し出した。\n『森は自我を喰らう。火の痛みを引き受け、己を照らす光とせよ』と声がした。", choices: [ { text: "火の粉に怯え、安全な暗がりへと後ずさる", type: "everyman" }, { text: "痛みに耐え、素手で火を掴み己の魂の熱とする", type: "hero" }, { text: "残った火を利用して、自らの道具を打ち直す", type: "creator" }, { text: "火の温もりを、後に続く者への道標として守る", type: "caregiver" }] }
 ];
 
 const npcPoolMaster = [
-    { story: "暗がりに、自我を失い狂気に沈んだ影がうずくまっている。
-その顔は、かつてのあなた自身に似ていた。
-『魂を…光をくれ…』と虚ろな声で呻いている。", choices: [ { text: "己の魂の力を分け与え、影の傷を癒す", type: "caregiver" }, { text: "「自力で立て」と厳しく突き放し、戦う意志を問う", type: "hero" }, { text: "影がなぜ狂気に沈んだのか、その原因を観察する", type: "sage" }, { text: "弱者に生きる価値はない。容赦なく斬り捨てる", type: "outlaw" }] },
-    { story: "狂気の茨に侵食された獣が、身動きが取れずに唸り声を上げている。
-暴れるたびに茨が肉を裂き、赤い滴が大地を濡らす。", choices: [ { text: "獣が落ち着くのを待ち、慎重に茨を解いてやる", type: "caregiver" }, { text: "刃を振り下ろし、茨ごと一刀両断して解放する", type: "hero" }, { text: "魔力を用いて、獣の肉体を傷つけずに茨だけを燃やす", type: "magician" }, { text: "関われば自分も傷つく。無視して通り過ぎる", type: "innocent" }] },
-    { story: "異端の姿をした者が、毒々しい色の雫が入った瓶を差し出してきた。
-『これを飲めば、深淵の真理が見えるだろう』", choices: [ { text: "破滅を恐れず、豪快に一息で飲み干す", type: "outlaw" }, { text: "怪しい誘いに乗るべきではない。丁重に断る", type: "everyman" }, { text: "雫の成分と魔力残滓を分析し、安全性を確かめる", type: "sage" }, { text: "雫の性質を書き換え、癒やしの薬に作り変える", type: "creator" }] }
+    { story: "暗がりに、自我を失い狂気に沈んだ影がうずくまっている。\nその顔は、かつてのあなた自身に似ていた。\n『魂を…光をくれ…』と虚ろな声で呻いている。", choices: [ { text: "己の魂の力を分け与え、影の傷を癒す", type: "caregiver" }, { text: "「自力で立て」と厳しく突き放し、戦う意志を問う", type: "hero" }, { text: "影がなぜ狂気に沈んだのか、その原因を観察する", type: "sage" }, { text: "弱者に生きる価値はない。容赦なく斬り捨てる", type: "outlaw" }] },
+    { story: "狂気の茨に侵食された獣が、身動きが取れずに唸り声を上げている。\n暴れるたびに茨が肉を裂き、赤い滴が大地を濡らす。", choices: [ { text: "獣が落ち着くのを待ち、慎重に茨を解いてやる", type: "caregiver" }, { text: "刃を振り下ろし、茨ごと一刀両断して解放する", type: "hero" }, { text: "魔力を用いて、獣の肉体を傷つけずに茨だけを燃やす", type: "magician" }, { text: "関われば自分も傷つく。無視して通り過ぎる", type: "innocent" }] },
+    { story: "異端の姿をした者が、毒々しい色の雫が入った瓶を差し出してきた。\n『これを飲めば、深淵の真理が見えるだろう』", choices: [ { text: "破滅を恐れず、豪快に一息で飲み干す", type: "outlaw" }, { text: "怪しい誘いに乗るべきではない。丁重に断る", type: "everyman" }, { text: "雫の成分と魔力残滓を分析し、安全性を確かめる", type: "sage" }, { text: "雫の性質を書き換え、癒やしの薬に作り変える", type: "creator" }] }
 ];
 
 const chestPoolMaster = [
-    { story: "重い鎖で厳重に封印された、黒い箱がある。
-『これを開ければ、他者を出し抜く禁断の知識が手に入る』と、頭の中に底知れぬ声が響いた。", choices: [ { text: "罠の構造を見切り、呪いを回避して知識だけを抽出する", type: "magician" }, { text: "絶対的な支配者の自信と共に、堂々と鎖を断ち切る", type: "ruler" }, { text: "恐ろしい気配を感じる。決して触れずに立ち去る", type: "innocent" }, { text: "何が起きるか分からないからこそ、面白半分で開ける", type: "jester" }] },
-    { story: "祭壇の上に、かつての支配者が被っていたとされる古びた冠が置かれている。
-権力と執着の、魅惑的な光をかすかに放っている。", choices: [ { text: "当然自分のものだ。迷わず頭に被り絶対的支配を望む", type: "ruler" }, { text: "支配など興味はない。未踏の地を求めて通り過ぎる", type: "explorer" }, { text: "過去の権威への反逆の証として、冠を叩き潰す", type: "outlaw" }, { text: "冠を溶かし、自分のための新しい装飾品を鋳造する", type: "creator" }] },
-    { story: "壁に一枚の巨大な白紙の羊皮紙と、血のインクが置かれている。
-何かを記さねば、この部屋からは出られないようだ。", choices: [ { text: "血のインクを使い、激しく情熱的な紋章を描く", type: "lover" }, { text: "これまでの迷宮の正確な構造と罠の位置を書き残す", type: "sage" }, { text: "真面目な空気を嫌い、不真面目で滑稽な落書きをする", type: "jester" }, { text: "間違えるのが怖いため、当たり障りのない記号を書く", type: "everyman" }] }
+    { story: "重い鎖で厳重に封印された、黒い箱がある。\n『これを開ければ、他者を出し抜く禁断の知識が手に入る』と、頭の中に底知れぬ声が響いた。", choices: [ { text: "罠の構造を見切り、呪いを回避して知識だけを抽出する", type: "magician" }, { text: "絶対的な支配者の自信と共に、堂々と鎖を断ち切る", type: "ruler" }, { text: "恐ろしい気配を感じる。決して触れずに立ち去る", type: "innocent" }, { text: "何が起きるか分からないからこそ、面白半分で開ける", type: "jester" }] },
+    { story: "祭壇の上に、かつての支配者が被っていたとされる古びた冠が置かれている。\n権力と執着の、魅惑的な光をかすかに放っている。", choices: [ { text: "当然自分のものだ。迷わず頭に被り絶対的支配を望む", type: "ruler" }, { text: "支配など興味はない。未踏の地を求めて通り過ぎる", type: "explorer" }, { text: "過去の権威への反逆の証として、冠を叩き潰す", type: "outlaw" }, { text: "冠を溶かし、自分のための新しい装飾品を鋳造する", type: "creator" }] },
+    { story: "壁に一枚の巨大な白紙の羊皮紙と、血のインクが置かれている。\n何かを記さねば、この部屋からは出られないようだ。", choices: [ { text: "血のインクを使い、激しく情熱的な紋章を描く", type: "lover" }, { text: "これまでの迷宮の正確な構造と罠の位置を書き残す", type: "sage" }, { text: "真面目な空気を嫌い、不真面目で滑稽な落書きをする", type: "jester" }, { text: "間違えるのが怖いため、当たり障りのない記号を書く", type: "everyman" }] }
 ];
 
 let map = [], px = 1, py = 1, dir = 1;
@@ -445,12 +436,17 @@ function resetGameState() {
     currentNPCEvent = shuffleArray(npcPoolMaster)[0];
     currentChestEvent = shuffleArray(chestPoolMaster)[0];
 }
-resetGameState();
 
 const S = [180, 110, 50, 15]; 
 const R = S.map(s => ({ x: 160-s, y: 160-s, w: s*2, h: s*2 }));
-const ctx = document.getElementById('view3d').getContext('2d');
-const miniCtx = document.getElementById('minimap').getContext('2d');
+let ctx = null, miniCtx = null;
+
+function initCanvas() {
+    const c1 = document.getElementById('view3d');
+    const c2 = document.getElementById('minimap');
+    if (c1) ctx = c1.getContext('2d');
+    if (c2) miniCtx = c2.getContext('2d');
+}
 
 function getCell(x, y) { if(x < 0 || y < 0 || y >= map.length || x >= map[0].length) return 1; return map[y][x]; }
 function getRel(f, r) { return getCell(px + dx[dir]*f + dx[(dir+1)%4]*r, py + dy[dir]*f + dy[(dir+1)%4]*r); }
@@ -538,7 +534,9 @@ window.addEventListener('keydown', (e) => {
 });
 
 function showPrologue() {
-    initAudio();
+    try { initAudio(); } catch(e) {}
+    initCanvas();
+    resetGameState();
     document.getElementById('audio-overlay').style.display = 'none';
     document.getElementById('prologue-ui').style.display = 'block';
 }
