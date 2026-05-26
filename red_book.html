@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深層迷宮：赤の書 // FOREST OF SHADOWS</title>
+    <style>
+        :root {
+            /* 淀んだ深い森のテーマ */
+            --bg-color: #080a08;
+            --panel-color: #121411;
+            --accent-color: #c5a963; 
+            --wire-green: #4a5e3d;   
+            --accent-red: #a83232;   
+            --text-color: #d1d0c5;
+            --text-muted: #75746a;
+            --border-color: #272b25;
+            --shadow-color: rgba(74, 94, 61, 0.15);
+        }
+
+        /* 勝利時（自己の統合） */
+        body.victory-theme {
+            --bg-color: #1a1c18;
+            --panel-color: #242621;
+            --accent-color: #e5c973;
+            --wire-green: #688256;
+            --accent-red: #d9534f;
+            --text-color: #e8e6d9;
+            --border-color: #3e453a;
+            --shadow-color: rgba(229, 201, 115, 0.25);
+        }
+
+        body {
+            font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none;
+            transition: background-color 2s ease, color 2s ease;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 550px;
+            background-color: var(--panel-color);
+            padding: 25px 25px 35px 25px;
+            border-radius: 4px;
+            box-shadow: 0 0 40px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            transition: all 2s ease;
+            position: relative;
+        }
+
+        .btn-mute {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+            border-radius: 4px;
+            padding: 5px 8px;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        .btn-mute:hover { background: rgba(255,255,255,0.05); color: var(--text-color); }
+
+        h1 {
+            font-size: 1.35rem;
+            text-align: center;
+            color: var(--wire-green);
+            margin-top: 5px;
+            letter-spacing: 4px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .dungeon-status {
+            font-size: 0.95rem;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .story-text {
+            font-size: 1.05rem;
+            line-height: 2.1;
+            margin-bottom: 35px;
+            min-height: 120px;
+            white-space: pre-line;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .choices-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .btn-choice {
+            background-color: #0b0c0a;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 16px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .btn-choice:hover, .btn-choice:focus {
+            background-color: #1a1f17;
+            color: var(--accent-color);
+            border-color: var(--wire-green);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+            outline: none;
+        }
+
+        .view-wrapper { transition: opacity 0.5s ease; opacity: 1; }
+        .view-wrapper.fade-out { opacity: 0; pointer-events: none; }
+
+        #prologue-ui, #story-ui, #result-ui, #battle-ui { display: none; }
+        
+        #dungeon-ui {
+            display: none; flex-direction: column; align-items: center; width: 100%;
+        }
+
+        .canvas-container { position: relative; margin-bottom: 25px; width: 100%; max-width: 320px; }
+        
+        canvas#view3d {
+            background-color: #000; border: 2px solid var(--wire-green);
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8); image-rendering: pixelated;
+            width: 100%; height: auto; display: block; border-radius: 4px;
+        }
+        
+        canvas#minimap {
+            position: absolute; top: 10px; right: 10px;
+            border: 1px solid var(--wire-green); background: rgba(0, 0, 0, 0.85);
+            width: 88px; height: 88px; border-radius: 4px;
+        }
+        
+        .controls { display: flex; gap: 10px; width: 100%; max-width: 320px; justify-content: space-between; }
+        
+        .btn-move {
+            background: #0b0c0a; color: var(--text-muted); border: 1px solid var(--border-color);
+            padding: 15px 5px; font-size: 1rem; cursor: pointer; border-radius: 4px; font-weight: bold;
+            flex: 1; transition: all 0.1s; text-align: center;
+        }
+        .btn-move:active { background: var(--wire-green); color: #fff; transform: scale(0.95); }
+
+        .result-title { font-size: 1.8rem; text-align: center; letter-spacing: 4px; margin: 25px 0; font-weight: bold; }
+        .victory-title { color: var(--accent-color); text-shadow: 0 0 10px rgba(197, 169, 99, 0.5); } 
+        .defeat-title { color: var(--accent-red); text-shadow: 0 0 10px rgba(168, 50, 50, 0.5); }  
+
+        .result-section {
+            background: rgba(0,0,0,0.4); padding: 20px; border-radius: 4px;
+            margin-bottom: 15px; line-height: 1.8; font-size: 0.95rem; border: 1px solid #1e211b;
+        }
+
+        .result-section h3 { color: var(--text-color); margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; font-size: 1.05rem; }
+        .shadow-section { border-left: 3px solid var(--accent-red); }
+        .shadow-section h3 { color: var(--accent-red); }
+
+        .quote-section {
+            text-align: center; font-style: italic; color: var(--accent-color);
+            padding: 25px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+            margin: 30px 0; font-size: 1rem; line-height: 1.8;
+        }
+
+        #audio-overlay {
+            position: absolute; inset: 0; background: var(--bg-color); display: flex;
+            flex-direction: column; justify-content: center; align-items: center; z-index: 200;
+        }
+
+        .btn-start {
+            background: transparent; color: var(--wire-green); border: 1px solid var(--wire-green);
+            padding: 15px 30px; font-size: 1.1rem; cursor: pointer; font-family: inherit; letter-spacing: 2px;
+            border-radius: 4px; transition: all 0.3s;
+        }
+        .btn-start:hover { background: var(--wire-green); color: #fff; box-shadow: 0 0 15px rgba(74, 94, 61, 0.4); }
+        
+        #game-top { position: absolute; top: -20px; left: 0; }
+        
+        .battle-text-area {
+            background: rgba(168, 50, 50, 0.1);
+            border-left: 4px solid var(--accent-red);
+            padding: 15px;
+            border-radius: 0 4px 4px 0;
+            color: #e8e6d9; 
+            margin-bottom: 25px;
+        }
+        .battle-highlight { color: #ffb3b3; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <div id="game-top"></div>
+    <button class="btn-mute" id="mute-btn" onclick="toggleMute()" title="サウンドON/OFF">🔊</button>
+
+    <div id="audio-overlay">
+        <p style="color: var(--text-muted); margin-bottom: 30px; font-size: 0.95rem;">※BGMが再生されます</p>
+        <button class="btn-start" onclick="showPrologue()">探索を開始する</button>
+    </div>
+
+    <h1>深層迷宮：赤の書</h1>
+
+    <div id="main-wrapper" class="view-wrapper">
+        <!-- プロローグ -->
+        <div id="prologue-ui">
+            <div class="dungeon-status">【 導入：崩れゆくペルソナ 】</div>
+            <div class="story-text">
+                鬱蒼たる無意識の森。その深奥に沈む古き「図書館」は、あなたが目を背けてきた記憶の墓場だ。
+                社会という檻の中で仮面にすがり、己の輪郭を見失ったあなたは、今や正気を失いつつある彷徨い人に過ぎない。
+
+                失われた本当の自己を取り戻すため、この薄暗い書架の迷宮を歩き、「記憶の結晶」を集めよ。
+                だが警戒しろ。淀んだ暗がりには、あなたがかつて切り捨て、押し殺した『己の影』が蠢いている。
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn-start" onclick="transitionTo('dungeon-ui', drawView)">図書館の扉を開く</button>
+            </div>
+        </div>
+
+        <!-- 3Dダンジョン -->
+        <div id="dungeon-ui">
+            <div class="dungeon-status" id="dungeon-status">記憶の結晶 [ 0 / 3 ]</div>
+            <div class="canvas-container">
+                <canvas id="view3d" width="320" height="320"></canvas>
+                <canvas id="minimap" width="88" height="88"></canvas>
+            </div>
+            <div class="controls">
+                <button class="btn-move" onclick="turn(-1)">↰ 左</button>
+                <button class="btn-move" onclick="moveForward()">↑ 前進</button>
+                <button class="btn-move" onclick="turn(1)">右 ↱</button>
+            </div>
+        </div>
+
+        <!-- イベント画面 -->
+        <div id="story-ui">
+            <div class="dungeon-status" id="event-title"></div>
+            <div id="story-text" class="story-text"></div>
+            <div id="choices-area" class="choices-container"></div>
+        </div>
+
+        <!-- 最終決戦 -->
+        <div id="battle-ui">
+            <div class="dungeon-status">【 深淵の影との対峙 】</div>
+            <div id="battle-text" class="story-text battle-text-area"></div>
+            <div id="battle-choices" class="choices-container"></div>
+        </div>
+
+        <!-- リザルト画面 -->
+        <div id="result-ui">
+            <div class="dungeon-status">個体化の完了</div>
+            <div id="res-title" class="result-title"></div>
+            <div id="res-narrative" class="story-text" style="font-size:0.95rem; margin-bottom:20px; color: var(--accent-color);"></div>
+            
+            <div class="result-section">
+                <h3>メイン・アーキタイプ（原型）</h3>
+                <div id="res-desc"></div>
+            </div>
+            
+            <div class="result-section shadow-section">
+                <h3>シャドウ（影の側面）</h3>
+                <div id="res-shadow"></div>
+            </div>
+
+            <div id="res-quote" class="quote-section"></div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn-start" onclick="restartGame()">森の入り口へ戻る（最初から）</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- 音響システム ---
+let audioCtx = null;
+let isMuted = false;
+let ambientOsc = null;
+let ambientGain = null;
+
+function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById('mute-btn').innerText = isMuted ? "🔇" : "🔊";
+    if (audioCtx) {
+        if (isMuted) audioCtx.suspend();
+        else audioCtx.resume();
+    }
+}
+
+function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    ambientOsc = audioCtx.createOscillator();
+    ambientGain = audioCtx.createGain();
+    ambientOsc.type = 'sawtooth'; ambientOsc.frequency.value = 40; ambientGain.gain.value = 0.05;
+    ambientOsc.connect(ambientGain); ambientGain.connect(audioCtx.destination); ambientOsc.start();
+    if (isMuted) audioCtx.suspend();
+}
+
+function playSound(type) {
+    if (!audioCtx || isMuted) return;
+    let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    if (type === 'step') {
+        osc.type = 'square'; osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+    } else if (type === 'event') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.6);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+    } else if (type === 'battle') {
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(30, audioCtx.currentTime + 2.0);
+        gain.gain.setValueAtTime(0.6, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 2.5);
+    }
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start();
+    osc.stop(audioCtx.currentTime + 2.5);
+}
+
+function transitionTo(targetId, callback) {
+    const wrapper = document.getElementById('main-wrapper');
+    wrapper.classList.add('fade-out'); 
+    
+    setTimeout(() => {
+        ['prologue-ui', 'dungeon-ui', 'story-ui', 'battle-ui', 'result-ui'].forEach(id => {
+            document.getElementById(id).style.display = 'none';
+        });
+        
+        const targetEl = document.getElementById(targetId);
+        targetEl.style.display = (targetId === 'dungeon-ui') ? 'flex' : 'block';
+        
+        if (callback) callback();
+        
+        document.getElementById('game-top').scrollIntoView({ behavior: 'auto' });
+        wrapper.classList.remove('fade-out');
+    }, 500); 
+}
+
+// --- ランダムイベントプール ---
+const crystalPoolMaster = [
+    { story: "腐敗した書架の奥、石の祭壇に古い本が開かれている。
+そこには、あなたが目を背けてきた己の罪と醜悪な欲望が克明に記されている。
+『己の影を知れ』と、古い血のインクが浮かび上がった。", choices: [ { text: "冷静に記述を読み解き、己の深層の法則を学ぶ", type: "sage" }, { text: "「こんなものは私ではない」と本を叩き落とし、目を塞ぐ", type: "innocent" }, { text: "忌まわしき罪の記述に、なぜか甘美な魅力を感じる", type: "lover" }, { text: "祭壇ごと本を破壊し、過去の記録を力で隠滅する", type: "outlaw" }] },
+    { story: "知識の残骸が泥のように溶け出した沼に足を踏み入れた。
+底なしの泥が足を絡め取り、自我を溶かそうと精神を蝕んでいく。
+重苦しい腐敗の中で、あなたはどう抗うか。", choices: [ { text: "精神を侵されながらも、強靭な意志で沼を一直線に突破する", type: "hero" }, { text: "自我の摩耗を受け入れつつ、安全な足場を少しずつ探す", type: "everyman" }, { text: "沼の奥に隠された、未知の抜け道がないか探索する", type: "explorer" }, { text: "己の意識を集中させ、泥の浸食を中和する結界を張る", type: "magician" }] },
+    { story: "森の根に締め付けられた鉄の檻。中には、かつての「理想」の残骸が転がっている。
+暗闇から『お前もいずれこうなる』と低く嗤う声が響いた。", choices: [ { text: "残骸の構造を詳細にスケッチし、知識として記録する", type: "sage" }, { text: "嗤い声に向かって武器を構え、恐怖を怒りに変える", type: "outlaw" }, { text: "残骸を悼み、せめてもの慰めとして供物を捧げる", type: "lover" }, { text: "何も聞こえなかったふりをして、足早に檻を立ち去る", type: "innocent" }] },
+    { story: "泥の中から老賢者が姿を現し、燃え盛るランタンの火を差し出した。
+『森は自我を喰らう。火の痛みを引き受け、己を照らす光とせよ』と声がした。", choices: [ { text: "火の粉に怯え、安全な暗がりへと後ずさる", type: "everyman" }, { text: "痛みに耐え、素手で火を掴み己の魂の熱とする", type: "hero" }, { text: "残った火を利用して、自らの道具を打ち直す", type: "creator" }, { text: "火の温もりを、後に続く者への道標として守る", type: "caregiver" }] }
+];
+
+const npcPoolMaster = [
+    { story: "暗がりに、自我を失い狂気に沈んだ影がうずくまっている。
+その顔は、かつてのあなた自身に似ていた。
+『魂を…光をくれ…』と虚ろな声で呻いている。", choices: [ { text: "己の魂の力を分け与え、影の傷を癒す", type: "caregiver" }, { text: "「自力で立て」と厳しく突き放し、戦う意志を問う", type: "hero" }, { text: "影がなぜ狂気に沈んだのか、その原因を観察する", type: "sage" }, { text: "弱者に生きる価値はない。容赦なく斬り捨てる", type: "outlaw" }] },
+    { story: "狂気の茨に侵食された獣が、身動きが取れずに唸り声を上げている。
+暴れるたびに茨が肉を裂き、赤い滴が大地を濡らす。", choices: [ { text: "獣が落ち着くのを待ち、慎重に茨を解いてやる", type: "caregiver" }, { text: "刃を振り下ろし、茨ごと一刀両断して解放する", type: "hero" }, { text: "魔力を用いて、獣の肉体を傷つけずに茨だけを燃やす", type: "magician" }, { text: "関われば自分も傷つく。無視して通り過ぎる", type: "innocent" }] },
+    { story: "異端の姿をした者が、毒々しい色の雫が入った瓶を差し出してきた。
+『これを飲めば、深淵の真理が見えるだろう』", choices: [ { text: "破滅を恐れず、豪快に一息で飲み干す", type: "outlaw" }, { text: "怪しい誘いに乗るべきではない。丁重に断る", type: "everyman" }, { text: "雫の成分と魔力残滓を分析し、安全性を確かめる", type: "sage" }, { text: "雫の性質を書き換え、癒やしの薬に作り変える", type: "creator" }] }
+];
+
+const chestPoolMaster = [
+    { story: "重い鎖で厳重に封印された、黒い箱がある。
+『これを開ければ、他者を出し抜く禁断の知識が手に入る』と、頭の中に底知れぬ声が響いた。", choices: [ { text: "罠の構造を見切り、呪いを回避して知識だけを抽出する", type: "magician" }, { text: "絶対的な支配者の自信と共に、堂々と鎖を断ち切る", type: "ruler" }, { text: "恐ろしい気配を感じる。決して触れずに立ち去る", type: "innocent" }, { text: "何が起きるか分からないからこそ、面白半分で開ける", type: "jester" }] },
+    { story: "祭壇の上に、かつての支配者が被っていたとされる古びた冠が置かれている。
+権力と執着の、魅惑的な光をかすかに放っている。", choices: [ { text: "当然自分のものだ。迷わず頭に被り絶対的支配を望む", type: "ruler" }, { text: "支配など興味はない。未踏の地を求めて通り過ぎる", type: "explorer" }, { text: "過去の権威への反逆の証として、冠を叩き潰す", type: "outlaw" }, { text: "冠を溶かし、自分のための新しい装飾品を鋳造する", type: "creator" }] },
+    { story: "壁に一枚の巨大な白紙の羊皮紙と、血のインクが置かれている。
+何かを記さねば、この部屋からは出られないようだ。", choices: [ { text: "血のインクを使い、激しく情熱的な紋章を描く", type: "lover" }, { text: "これまでの迷宮の正確な構造と罠の位置を書き残す", type: "sage" }, { text: "真面目な空気を嫌い、不真面目で滑稽な落書きをする", type: "jester" }, { text: "間違えるのが怖いため、当たり障りのない記号を書く", type: "everyman" }] }
+];
+
+let map = [], px = 1, py = 1, dir = 1;
+const dx = [0, 1, 0, -1], dy = [-1, 0, 1, 0];
+let discovered = [];
+let scores = {};
+let crystals = 0;
+let decisionStartTime = 0, decisionTimes = [];
+let currentCrystalPool = [], currentNPCEvent = null, currentChestEvent = null;
+
+function shuffleArray(array) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function resetGameState() {
+    const baseMap = [
+        [1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,1,0,1,0,0,0,1], 
+        [1,0,1,0,1,0,1,1,1,0,1],
+        [1,0,1,0,0,0,0,0,0,0,1],
+        [1,0,1,1,1,0,1,1,1,0,1],
+        [1,0,0,0,0,0,0,0,1,0,1], 
+        [1,1,1,1,1,0,1,1,1,0,1],
+        [1,0,0,0,0,0,1,0,0,0,1], 
+        [1,0,1,1,1,0,1,1,1,1,1],
+        [1,0,0,0,1,5,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1]
+    ];
+    map = baseMap.map(row => [...row]);
+    px = 1; py = 1; dir = 1;
+    discovered = Array.from({length: 11}, () => Array(11).fill(false));
+    scores = { innocent:0, explorer:0, sage:0, hero:0, outlaw:0, magician:0, everyman:0, lover:0, jester:0, caregiver:0, creator:0, ruler:0 };
+    crystals = 0; decisionTimes = [];
+    document.getElementById('dungeon-status').innerText = `記憶の結晶 [ 0 / 3 ]`;
+    document.body.classList.remove('victory-theme');
+
+    let emptyCells = [];
+    for(let y=1; y<10; y++) {
+        for(let x=1; x<10; x++) {
+            if(map[y][x] === 0 && !(x === 1 && y === 1)) {
+                emptyCells.push({x: x, y: y});
+            }
+        }
+    }
+    emptyCells = shuffleArray(emptyCells);
+    
+    map[emptyCells[0].y][emptyCells[0].x] = 2;
+    map[emptyCells[1].y][emptyCells[1].x] = 2;
+    map[emptyCells[2].y][emptyCells[2].x] = 2;
+    map[emptyCells[3].y][emptyCells[3].x] = 3;
+    map[emptyCells[4].y][emptyCells[4].x] = 4;
+
+    currentCrystalPool = shuffleArray(crystalPoolMaster).slice(0, 3);
+    currentNPCEvent = shuffleArray(npcPoolMaster)[0];
+    currentChestEvent = shuffleArray(chestPoolMaster)[0];
+}
+resetGameState();
+
+const S = [180, 110, 50, 15]; 
+const R = S.map(s => ({ x: 160-s, y: 160-s, w: s*2, h: s*2 }));
+const ctx = document.getElementById('view3d').getContext('2d');
+const miniCtx = document.getElementById('minimap').getContext('2d');
+
+function getCell(x, y) { if(x < 0 || y < 0 || y >= map.length || x >= map[0].length) return 1; return map[y][x]; }
+function getRel(f, r) { return getCell(px + dx[dir]*f + dx[(dir+1)%4]*r, py + dy[dir]*f + dy[(dir+1)%4]*r); }
+
+function updateMinimap() {
+    discovered[py][px] = true;
+    for(let i=0; i<4; i++) {
+        let nx = px+dx[i], ny = py+dy[i];
+        if(ny>=0 && ny<11 && nx>=0 && nx<11) discovered[ny][nx] = true;
+    }
+    miniCtx.clearRect(0, 0, 88, 88);
+    for(let y=0; y<11; y++) {
+        for(let x=0; x<11; x++) {
+            if(!discovered[y][x]) continue;
+            miniCtx.fillStyle = map[y][x]===1 ? '#1a1d17' : (map[y][x]>=2 ? '#7a1f1f' : '#2d3826');
+            miniCtx.fillRect(x*8, y*8, 8, 8);
+            miniCtx.strokeStyle = '#000'; miniCtx.strokeRect(x*8, y*8, 8, 8);
+        }
+    }
+    miniCtx.fillStyle = '#c5a963'; miniCtx.fillRect(px*8+2, py*8+2, 4, 4);
+}
+
+function drawView() {
+    updateMinimap();
+    ctx.fillStyle = '#080a08'; ctx.fillRect(0, 0, 320, 320);
+    ctx.strokeStyle = '#4a5e3d'; ctx.lineWidth = 1.5;
+    let maxD = 3;
+    for(let d = 0; d <= 3; d++) { if(getRel(d, 0) === 1) { maxD = d; break; } }
+
+    for(let d = maxD; d >= 0; d--) {
+        let f = getRel(d, 0), l = getRel(d, -1), r = getRel(d, 1), rd = R[d], rdn = (d < 3) ? R[d+1] : null;
+
+        if (d < 3) {
+            ctx.beginPath();
+            ctx.moveTo(rd.x, rd.y); ctx.lineTo(rdn.x, rdn.y); ctx.moveTo(rd.x+rd.w, rd.y); ctx.lineTo(rdn.x+rdn.w, rdn.y);
+            ctx.moveTo(rd.x, rd.y+rd.h); ctx.lineTo(rdn.x, rdn.y+rdn.h); ctx.moveTo(rd.x+rd.w, rd.y+rd.h); ctx.lineTo(rdn.x+rdn.w, rdn.y+rdn.h); ctx.stroke();
+        }
+        
+        if (l === 1 && d < 3) { 
+            ctx.beginPath(); ctx.moveTo(rd.x, rd.y); ctx.lineTo(rdn.x, rdn.y); ctx.lineTo(rdn.x, rdn.y+rdn.h); ctx.lineTo(rd.x, rd.y+rd.h); ctx.closePath(); ctx.fill(); ctx.stroke();
+        } else if (l !== 1 && d < 3) { 
+            ctx.beginPath(); ctx.moveTo(rdn.x, rdn.y); ctx.lineTo(rd.x, rdn.y); ctx.moveTo(rdn.x, rdn.y+rdn.h); ctx.lineTo(rd.x, rdn.y+rdn.h); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(rdn.x, rdn.y); ctx.lineTo(rdn.x, rdn.y+rdn.h); ctx.stroke();
+        }
+        
+        if (r === 1 && d < 3) { 
+            ctx.beginPath(); ctx.moveTo(rd.x+rd.w, rd.y); ctx.lineTo(rdn.x+rdn.w, rdn.y); ctx.lineTo(rdn.x+rdn.w, rdn.y+rdn.h); ctx.lineTo(rd.x+rd.w, rd.y+rd.h); ctx.closePath(); ctx.fill(); ctx.stroke();
+        } else if (r !== 1 && d < 3) { 
+            ctx.beginPath(); ctx.moveTo(rdn.x+rdn.w, rdn.y); ctx.lineTo(rd.x+rd.w, rdn.y); ctx.moveTo(rdn.x+rdn.w, rdn.y+rdn.h); ctx.lineTo(rd.x+rd.w, rdn.y+rd.h); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(rdn.x+rdn.w, rdn.y); ctx.lineTo(rdn.x+rdn.w, rdn.y+rdn.h); ctx.stroke();
+        }
+
+        if (d === maxD && f === 1) {
+            ctx.fillStyle = '#080a08'; ctx.fillRect(rd.x, rd.y, rd.w, rd.h); ctx.strokeRect(rd.x, rd.y, rd.w, rd.h);
+        }
+        
+        if (d > 0 && f >= 2) {
+            let cx = 160, cy = 160;
+            if (f === 2) { 
+                let size = S[d] * 0.3; ctx.fillStyle = '#a83232';
+                ctx.beginPath(); ctx.moveTo(cx, cy-size); ctx.lineTo(cx+size, cy); ctx.lineTo(cx, cy+size); ctx.lineTo(cx-size, cy); ctx.fill(); ctx.stroke();
+            } else if (f === 3) { 
+                let size = S[d] * 0.25; ctx.fillStyle = '#444';
+                ctx.fillRect(cx-size, cy, size*2, size*2); ctx.strokeRect(cx-size, cy, size*2, size*2);
+                ctx.beginPath(); ctx.arc(cx, cy-size*0.5, size*0.8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            } else if (f === 4) { 
+                let size = S[d] * 0.35; ctx.fillStyle = '#111';
+                ctx.fillRect(cx-size, cy, size*2, size); ctx.strokeRect(cx-size, cy, size*2, size);
+                ctx.strokeStyle = '#555'; ctx.beginPath(); ctx.moveTo(cx-size, cy+size/2); ctx.lineTo(cx+size, cy+size/2); ctx.stroke(); ctx.strokeStyle = '#4a5e3d';
+            } else if (f === 5) { 
+                let bw = S[d]*0.8, bh = S[d]*1.2; ctx.fillStyle = '#000';
+                ctx.fillRect(cx-bw, cy-bh+S[d], bw*2, bh*2); ctx.strokeRect(cx-bw, cy-bh+S[d], bw*2, bh*2);
+                ctx.fillStyle = '#a83232'; ctx.beginPath(); ctx.arc(cx, cy, S[d]*0.2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            }
+        }
+    }
+}
+
+window.addEventListener('keydown', (e) => {
+    if(document.getElementById('dungeon-ui').style.display !== 'none') {
+        if(e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') moveForward();
+        if(e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') turn(-1);
+        if(e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') turn(1);
+    }
+});
+
+function showPrologue() {
+    initAudio();
+    document.getElementById('audio-overlay').style.display = 'none';
+    document.getElementById('prologue-ui').style.display = 'block';
+}
+
+function startGame() {
+    playSound('step');
+    transitionTo('dungeon-ui', drawView);
+}
+
+function restartGame() {
+    playSound('step');
+    resetGameState();
+    transitionTo('prologue-ui');
+}
+
+function turn(amount) { dir = (dir + amount + 4) % 4; playSound('step'); drawView(); }
+
+function moveForward() {
+    if (getRel(1, 0) !== 1) {
+        px += dx[dir]; py += dy[dir]; 
+        let tile = map[py][px];
+        drawView(); 
+        if (tile >= 2) triggerEvent(tile);
+        else playSound('step');
+    }
+}
+
+function renderChoices(choices, typeId) {
+    let choicesEl = document.getElementById('choices-area');
+    choicesEl.innerHTML = '';
+    let shuffled = shuffleArray(choices);
+    shuffled.forEach(c => {
+        let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = c.text;
+        btn.onclick = () => {
+            let timeTaken = Date.now() - decisionStartTime;
+            decisionTimes.push(timeTaken);
+            
+            scores[c.type]++; 
+            if(typeId === 2) { crystals++; document.getElementById('dungeon-status').innerText = `記憶の結晶 [ ${crystals} / 3 ]`; }
+            map[py][px] = 0; 
+            playSound('step');
+            transitionTo('dungeon-ui', drawView);
+        };
+        choicesEl.appendChild(btn);
+    });
+}
+
+function triggerEvent(type) {
+    playSound('event');
+    transitionTo('story-ui', () => {
+        let titleEl = document.getElementById('event-title');
+        let storyEl = document.getElementById('story-text');
+        
+        if (type === 2) { 
+            titleEl.innerText = `【 記憶の残滓 [ ${crystals + 1} / 3 ] 】`;
+            let data = currentCrystalPool[crystals];
+            storyEl.innerText = data.story;
+            renderChoices(data.choices, 2);
+        } else if (type === 3) { 
+            titleEl.innerText = "【 彷徨える影 】";
+            storyEl.innerText = currentNPCEvent.story;
+            renderChoices(currentNPCEvent.choices, 3);
+        } else if (type === 4) { 
+            titleEl.innerText = "【 封印された遺物 】";
+            storyEl.innerText = currentChestEvent.story;
+            renderChoices(currentChestEvent.choices, 4);
+        } else if (type === 5) { 
+            if (crystals < 3) {
+                titleEl.innerText = "【 閉ざされた扉 】";
+                storyEl.innerText = `冷たく重い鉄の扉が、あなたの行く手を拒絶している。
+失われた記憶の結晶がまだ足りないようだ。
+（現在の結晶: ${crystals} / 3個）`;
+                let choicesEl = document.getElementById('choices-area');
+                choicesEl.innerHTML = '';
+                let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = "引き返す";
+                btn.onclick = () => { dir = (dir + 2) % 4; px += dx[dir]; py += dy[dir]; playSound('step'); transitionTo('dungeon-ui', drawView); };
+                choicesEl.appendChild(btn);
+            } else {
+                startFinalBattle();
+                return; 
+            }
+        }
+        decisionStartTime = Date.now();
+    });
+}
+
+// ----------------------------------------------------
+// アーキタイプ解説データ
+// ----------------------------------------------------
+const archetypeData = {
+    innocent: { 
+        title: "無垢なる者 (Innocent)", 
+        desc: "純粋さ、楽観主義、精度、そして調和を求めるアーキタイプです。不条理な世界の中でも「正しさ」や「安全」を信じ、他者や環境に対して誠実であろうとします。", 
+        shadowName: "現実逃避と否認の狂気", 
+        shadowDesc: "現実の困難から目を背け、不都合な真実を無視する「否認」や「現実逃避」に陥る傾向があります。", 
+        group: "slow", 
+        quote: "「私たちが他人に苛立つすべてのことは、私たち自身を理解することに繋がる。」" 
+    },
+    explorer: { 
+        title: "探求者 (Explorer)", 
+        desc: "自由と新しい体験を求め、未知の世界を開拓するアーキタイプです。既存の枠組みに縛られることを嫌い、常に自立と自己発見を目指して行動します。", 
+        shadowName: "永遠の放浪と孤独", 
+        shadowDesc: "一つの場所に留まることができず、現実の問題から逃げ続ける「永遠の放浪者」になる恐れがあります。", 
+        group: "mid", 
+        quote: "「私は、私に起こったことではなく、私が選択したものになる。」" 
+    },
+    sage: { 
+        title: "賢者 (Sage)", 
+        desc: "真実と知識を追求し、世界を客観的・論理的に理解しようとするアーキタイプです。感情に流されず、深い洞察力をもって事物の本質を見ぬく力を持っています。", 
+        shadowName: "冷酷なる傲慢と逃避", 
+        shadowDesc: "共感性を失い、すべてを理屈で正当化する冷酷さや、行動を起こさず知識の世界に逃避する傾向があります。", 
+        group: "slow", 
+        quote: "「外を見る者は夢を見る。内を見る者は目覚める。」" 
+    },
+    hero: { 
+        title: "英雄 (Hero)", 
+        desc: "目標を達成し、困難を乗り越えることで自らの価値を証明しようとするアーキタイプです。逆境において最も力を発揮し、弱者を守るための勇気と行動力を持ちます。", 
+        shadowName: "戦いを求める暴君", 
+        shadowDesc: "他者の弱さを許容できず、常に戦いを求めて傲慢な暴君となるか、無意味な戦いで自滅する傾向があります。", 
+        group: "fast", 
+        quote: "「あなたの恐れがある場所にこそ、あなたの課題がある。」" 
+    },
+    outlaw: { 
+        title: "無法者 (Outlaw)", 
+        desc: "既存のルールや古い体制を破壊し、根本的な変革をもたらすアーキタイプです。社会の矛盾や理不尽に対して反逆し、ゼロから新しいものを構築するエネルギーを持ちます。", 
+        shadowName: "全てを壊す虚無主義", 
+        shadowDesc: "建設的な目的を見失い、ただ壊すこと自体に快感を覚える破壊衝動や虚無主義に陥る危険性があります。", 
+        group: "fast", 
+        quote: "「天国まで枝を伸ばすには、根を地獄まで降ろさなければならない。」" 
+    },
+    magician: { 
+        title: "魔術師 (Magician)", 
+        desc: "事物の根本的な法則を直感的に理解し、自身のビジョンを現実化させるアーキタイプです。相反する要素を統合し、状況を根本から変容（シフト）させる力を持ちます。", 
+        shadowName: "他者を操る黒魔術", 
+        shadowDesc: "己の直感や能力を過信し、他者を自分の都合よく操作しようとする「詐欺師」や「黒魔術」的な側面に転じる恐れがあります。", 
+        group: "mid", 
+        quote: "「無意識を意識化しない限り、それはあなたの人生を支配し、あなたはそれを運命と呼ぶだろう。」" 
+    },
+    everyman: { 
+        title: "一般人 (Everyman)", 
+        desc: "他者との平等な繋がりや、コミュニティへの帰属を求めるアーキタイプです。特別な存在になることよりも、地に足のついた日常や、人々との連帯感を重んじます。", 
+        shadowName: "責任放棄と被害者意識", 
+        shadowDesc: "目立つことや自立を恐れ、集団の意見に無批判に同調したり、自らの責任を放棄する被害者意識に陥りやすくなります。", 
+        group: "slow", 
+        quote: "「孤独とは人が周りにいないことではなく、自分にとって重要なことを伝えられないことから生じる。」" 
+    },
+    lover: { 
+        title: "恋人 (Lover)", 
+        desc: "親密さ、美、情熱を重んじ、他者や物事と深い関係を築こうとするアーキタイプです。五感が豊かで、対象の魅力を最大限に引き出す力を持っています。", 
+        shadowName: "執着と嫉妬の依存", 
+        shadowDesc: "見捨てられることを極度に恐れ、対象への強い執着や嫉妬心を抱き、自己を見失う「依存」に陥る危険性があります。", 
+        group: "mid", 
+        quote: "「二つの人格の出会いは、二つの化学物質の接触のようなものだ。少しでも反応があれば、両者とも変容する。」" 
+    },
+    jester: { 
+        title: "道化師 (Jester)", 
+        desc: "ユーモアと遊び心で今この瞬間を楽しみ、周囲に活力を与えるアーキタイプです。硬直したルールを笑い飛ばし、深刻すぎる状況に風穴を開ける役割を持ちます。", 
+        shadowName: "痛みを直視せぬ不誠実", 
+        shadowDesc: "人生の重大な問題から目を背け、すべてを茶化して責任を取ろうとしない不誠実さに繋がる恐れがあります。", 
+        group: "fast", 
+        quote: "「すべての混沌には宇宙があり、すべての無秩序には秘密の秩序がある。」" 
+    },
+    caregiver: { 
+        title: "援助者 (Caregiver)", 
+        desc: "他者を保護し、育成し、思いやりを持って奉仕するアーキタイプです。高い共感力を持ち、周囲の人々にとって安心できる安全網（セーフティネット）として機能します。", 
+        shadowName: "自立を奪う支配的な愛", 
+        shadowDesc: "「他者を助けること」に過度に依存し、相手の自立を妨げる過干渉や共依存の関係を作り出してしまう危険性があります。", 
+        group: "slow", 
+        quote: "「自分自身の闇を知ることこそ、他人の闇に対処するための最良の方法である。」" 
+    },
+    creator: { 
+        title: "創造者 (Creator)", 
+        desc: "想像力を形にし、永続する価値や新しいものを生み出すアーキタイプです。自己表現の欲求が強く、独自の美学やビジョンを現実の世界で具現化しようとします。", 
+        shadowName: "自己破壊的な完璧主義", 
+        shadowDesc: "自身のビジョンに執着するあまり、思い通りにならない現実に対して激しい怒りを抱く「自己破壊的な完璧主義」に陥りやすくなります。", 
+        group: "mid", 
+        quote: "「新しいものの創造は知性によってではなく、内的欲求から働く遊びの衝動によって達成される。」" 
+    },
+    ruler: { 
+        title: "支配者 (Ruler)", 
+        desc: "秩序と構造を作り出し、コミュニティや組織をコントロールするリーダーのアーキタイプです。責任感が強く、全体の利益のために安定した環境を構築する能力を持ちます。", 
+        shadowName: "全てを抑圧する偏執狂", 
+        shadowDesc: "コントロールを失うことへの恐怖から、他者の意見を許容できず、権力によってすべてを抑圧するパラノイア（偏執狂）に陥る危険性があります。", 
+        group: "fast", 
+        quote: "「あなたが抵抗するものは、持続する。」" 
+    }
+};
+
+let currentHighestType = null, currentTimeTrait = "", currentTimeGroup = "";
+
+function startFinalBattle() {
+    playSound('battle');
+    
+    transitionTo('battle-ui', () => {
+        currentHighestType = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
+        let data = archetypeData[currentHighestType];
+        
+        let avgTime = decisionTimes.length > 0 ? (decisionTimes.reduce((a,b)=>a+b, 0) / decisionTimes.length) : 20000;
+        let avgSec = (avgTime / 1000).toFixed(1);
+
+        if (avgTime < 12000) { 
+            currentTimeTrait = "直感と電光石火の速さ（12秒未満）"; currentTimeGroup = "fast"; 
+        } else if (avgTime > 28000) { 
+            currentTimeTrait = "深き熟考と慎重なる歩み（28秒以上）"; currentTimeGroup = "slow"; 
+        } else { 
+            currentTimeTrait = "20秒前後の柔軟なる間合いと立ち回り"; currentTimeGroup = "mid"; 
+        }
+
+        let battleText = `鉄の扉を抜けた先。巨大な空間の底で、重厚な足音が響く。
+あなたが無意識の底に切り捨てた影、【<span class="battle-highlight">${data.shadowName}</span>】の具現が立ち塞がった。
+
+`;
+        battleText += `【魂の軌跡】
+`;
+        battleText += `迷宮でのあなたの決断平均時間は ${avgSec}秒。
+その『<span class="battle-highlight">${currentTimeTrait}</span>』が、あなたの自我（エゴ）の核となっている。
+
+`;
+        battleText += `さあ、名もなき彷徨い人よ。
+この絶望の影に対して、どう立ち向かう。`;
+
+        document.getElementById('battle-text').innerHTML = battleText;
+        
+        let battleChoices = [
+            { text: "武器を構え、影の主を力と意志でねじ伏せる", group: "fast" },
+            { text: "影の嘆きを受け入れ、盾を捨ててその刃を身に受ける", group: "slow" },
+            { text: "影の攻撃パターンを冷静に見切り、致命の隙を突く", group: "slow" },
+            { text: "影の力を利用し、自らの魔術の糧として吸収する", group: "mid" }
+        ];
+
+        let choicesEl = document.getElementById('battle-choices');
+        choicesEl.innerHTML = '';
+        battleChoices.forEach(c => {
+            let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = c.text;
+            btn.onclick = () => resolveFinalBattle(c.group);
+            choicesEl.appendChild(btn);
+        });
+    });
+}
+
+function resolveFinalBattle(finalChoiceGroup) {
+    let data = archetypeData[currentHighestType];
+    let winPoints = (scores[currentHighestType] >= 2) ? 1 : 0; 
+    
+    if (data.group === currentTimeGroup) winPoints++;
+    if (data.group === finalChoiceGroup) winPoints++;
+    let isVictory = (winPoints >= 2);
+
+    transitionTo('result-ui', () => {
+        let titleEl = document.getElementById('res-title');
+        let narrativeEl = document.getElementById('res-narrative');
+
+        if (isVictory) {
+            document.body.classList.add('victory-theme');
+            titleEl.innerText = "【 自己の統合 (INTEGRATION) 】"; titleEl.className = "result-title victory-title";
+            narrativeEl.innerText = `見事だ。あなたは影を打ち倒し、その魂を自らのものとして統合した。
+これまでの選択と決断のペースが「${data.title}」としての確固たる自我を築き上げていたのだ。
+深淵の森は開かれ、あなたは「真の自己（セルフ）」という確かな光を持って現実へと帰還する。`;
+        } else {
+            document.body.classList.remove('victory-theme');
+            titleEl.innerText = "【 自我の喪失 (DISSOLUTION) 】"; titleEl.className = "result-title defeat-title";
+            narrativeEl.innerText = `影の圧倒的な一撃の前に、あなたの自我は砕け散った。
+選択の迷いか、ペースの不一致か。己の本質を見誤った自我は、深淵の森の泥と同化し、影として彷徨うこととなる。
+だが、心の深層はまだ閉じられてはいない。己の影を理解するまで、何度でも立ち上がれ。`;
+        }
+
+        document.getElementById('res-desc').innerHTML = `<span style="color:var(--accent-color); font-weight:bold; font-size:1.1rem;">【 ${data.title} 】</span><br><br>${data.desc}`;
+        document.getElementById('res-shadow').innerHTML = `<span style="color:var(--accent-red); font-weight:bold; font-size:1.1rem;">【 ${data.shadowName} 】</span><br><br>${data.shadowDesc}`;
+        document.getElementById('res-quote').innerText = data.quote;
+    });
+}
+</script>
+</body>
+</html>
