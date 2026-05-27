@@ -291,6 +291,24 @@
             transform: scaleX(0); transition: transform 0.25s ease;
         }
         .btn-start:hover::after { transform: scaleX(1); }
+
+        /* プロローグガイド */
+        .prologue-guide {
+            background: rgba(74,94,61,0.06);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--wire-green);
+            padding: 15px 18px;
+            margin: 0 0 25px 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.88rem;
+            line-height: 2.0;
+            color: var(--text-muted);
+        }
+        .prologue-guide p { margin: 4px 0; }
+        .guide-rule {
+            color: var(--wire-green); letter-spacing: 3px;
+            font-size: 0.82rem; margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -316,6 +334,13 @@
 
                 失われた本当の自己を取り戻すため、この薄暗い書架の迷宮を歩き、「記憶の結晶」を集めよ。
                 だが警戒しろ。淀んだ暗がりには、あなたがかつて切り捨て、押し殺した『己の影』が蠢いている。
+            </div>
+            <div class="prologue-guide">
+                <div class="guide-rule">〈 迷宮の掟 〉</div>
+                <p>ボタン、またはキーボード（W・A・D ／ 矢印キー）で書架を探索し、「記憶の結晶」を三つ集めよ。</p>
+                <p>迷宮で出会う問いへの答えは、汝の魂に静かに刻まれていく。<br>
+                何を選ぶか。そして——その選択に己が費やした<em>時の重さ</em>もまた、<br>
+                深淵の影との最終決戦の行方を、密かに左右するだろう。</p>
             </div>
             <div style="text-align: center; margin-top: 20px;">
                 <button class="btn-start" onclick="transitionTo('dungeon-ui', drawView)">図書館の扉を開く</button>
@@ -428,6 +453,110 @@ function playSound(type) {
     }
     osc.connect(gain); gain.connect(audioCtx.destination); osc.start();
     osc.stop(audioCtx.currentTime + 2.5);
+}
+
+// --- BGMシステム ---
+let bgmOscs = [], bgmGains = [], bgmTimer = null, bgmArpIdx = 0;
+
+function stopBgm(fadeTime = 0.6) {
+    if (bgmTimer) { clearTimeout(bgmTimer); bgmTimer = null; }
+    if (!audioCtx) { bgmOscs = []; bgmGains = []; bgmArpIdx = 0; return; }
+    const stopAt = audioCtx.currentTime + fadeTime;
+    bgmGains.forEach(g => { try { g.gain.linearRampToValueAtTime(0, stopAt); } catch(e) {} });
+    bgmOscs.forEach(o => { try { o.stop(stopAt + 0.05); } catch(e) {} });
+    bgmOscs = []; bgmGains = []; bgmArpIdx = 0;
+}
+
+// ラスボス専用BGM（Aマイナー：神秘的・重厚）
+const BATTLE_ARP = [110, 130.81, 164.81, 196, 220, 196, 164.81, 146.83];
+function startBattleBgm() {
+    if (!audioCtx) return;
+    stopBgm(0.4);
+    if (ambientGain) {
+        ambientGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        ambientGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.5);
+    }
+    const master = audioCtx.createGain();
+    master.gain.setValueAtTime(0, audioCtx.currentTime);
+    master.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 2.5);
+    master.connect(audioCtx.destination);
+    bgmGains.push(master);
+
+    // 低音ドローン（sawtooth A1）
+    const drone = audioCtx.createOscillator();
+    const droneG = audioCtx.createGain();
+    drone.type = 'sawtooth'; drone.frequency.value = 55;
+    droneG.gain.value = 0.08;
+    drone.connect(droneG); droneG.connect(master);
+    drone.start(); bgmOscs.push(drone); bgmGains.push(droneG);
+
+    // トレモロLFO
+    const lfo = audioCtx.createOscillator();
+    const lfoG = audioCtx.createGain();
+    lfo.type = 'sine'; lfo.frequency.value = 1.8;
+    lfoG.gain.value = 0.028;
+    lfo.connect(lfoG); lfoG.connect(droneG.gain);
+    lfo.start(); bgmOscs.push(lfo);
+
+    // 五度上ドローン（E1）
+    const fifth = audioCtx.createOscillator();
+    const fifthG = audioCtx.createGain();
+    fifth.type = 'sawtooth'; fifth.frequency.value = 82.41;
+    fifthG.gain.value = 0.045;
+    fifth.connect(fifthG); fifthG.connect(master);
+    fifth.start(); bgmOscs.push(fifth); bgmGains.push(fifthG);
+
+    scheduleBattleArp(master);
+}
+function scheduleBattleArp(dest) {
+    if (!audioCtx || bgmOscs.length === 0) return;
+    const freq = BATTLE_ARP[bgmArpIdx % BATTLE_ARP.length];
+    bgmArpIdx++;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.065, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.65);
+    osc.connect(gain); gain.connect(dest);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.7);
+    bgmTimer = setTimeout(() => scheduleBattleArp(dest), 440);
+}
+
+// リザルト専用BGM（Cメジャー：穏やか・内省的）
+const RESULT_MELODY = [392, 440, 493.88, 523.25, 587.33, 523.25, 493.88, 440];
+function startResultBgm() {
+    if (!audioCtx) return;
+    stopBgm(0.8);
+    const master = audioCtx.createGain();
+    master.gain.setValueAtTime(0, audioCtx.currentTime);
+    master.gain.linearRampToValueAtTime(0.85, audioCtx.currentTime + 3);
+    master.connect(audioCtx.destination);
+    bgmGains.push(master);
+
+    // 穏やかなCメジャーパッド（C3 E3 G3 C4）
+    [[130.81, 0.05], [164.81, 0.042], [196, 0.042], [261.63, 0.036]].forEach(([f, v]) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.value = f;
+        g.gain.value = v;
+        osc.connect(g); g.connect(master);
+        osc.start(); bgmOscs.push(osc); bgmGains.push(g);
+    });
+    scheduleResultMelody(master);
+}
+function scheduleResultMelody(dest) {
+    if (!audioCtx || bgmOscs.length === 0) return;
+    const freq = RESULT_MELODY[bgmArpIdx % RESULT_MELODY.length];
+    bgmArpIdx++;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.062, audioCtx.currentTime + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.4);
+    osc.connect(gain); gain.connect(dest);
+    osc.start(); osc.stop(audioCtx.currentTime + 1.5);
+    bgmTimer = setTimeout(() => scheduleResultMelody(dest), 1050);
 }
 
 function transitionTo(targetId, callback) {
@@ -657,6 +786,11 @@ function startGame() {
 
 function restartGame() {
     playSound('step');
+    stopBgm(0.5);
+    if (ambientGain && audioCtx) {
+        ambientGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        ambientGain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 1.5);
+    }
     resetGameState();
     transitionTo('prologue-ui');
 }
@@ -835,7 +969,8 @@ let currentHighestType = null, currentTimeTrait = "", currentTimeGroup = "";
 
 function startFinalBattle() {
     playSound('battle');
-    
+    startBattleBgm();
+
     transitionTo('battle-ui', () => {
         currentHighestType = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
         let data = archetypeData[currentHighestType];
@@ -881,6 +1016,7 @@ function resolveFinalBattle(finalChoiceGroup) {
     let isVictory = (winPoints >= 2);
 
     transitionTo('result-ui', () => {
+        startResultBgm();
         let titleEl = document.getElementById('res-title');
         let narrativeEl = document.getElementById('res-narrative');
 
