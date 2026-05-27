@@ -204,6 +204,18 @@
             margin-bottom: 25px;
         }
         .battle-highlight { color: #ffb3b3; font-weight: bold; }
+
+        .skip-hint {
+            text-align: center; font-size: 0.75rem; color: var(--text-muted);
+            margin-top: -15px; margin-bottom: 15px; letter-spacing: 1px;
+            opacity: 0; transition: opacity 0.4s; pointer-events: none;
+        }
+        .skip-hint.visible { opacity: 1; }
+        .typing-cursor::after { content: '▎'; color: var(--accent-color); animation: cur-blink 0.7s step-end infinite; }
+        @keyframes cur-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        .radar-section { border-left: 3px solid var(--wire-green); }
+        .radar-section h3 { color: var(--wire-green); }
     </style>
 </head>
 <body>
@@ -250,14 +262,15 @@
         </div>
 
         <!-- イベント画面 -->
-        <div id="story-ui">
+        <div id="story-ui" onclick="skipTypewriter()">
             <div class="dungeon-status" id="event-title"></div>
             <div id="story-text" class="story-text"></div>
+            <div id="skip-hint" class="skip-hint">クリックでスキップ</div>
             <div id="choices-area" class="choices-container"></div>
         </div>
 
         <!-- 最終決戦 -->
-        <div id="battle-ui">
+        <div id="battle-ui" onclick="skipTypewriter()">
             <div class="dungeon-status">【 深淵の影との対峙 】</div>
             <div id="battle-text" class="story-text battle-text-area"></div>
             <div id="battle-choices" class="choices-container"></div>
@@ -277,6 +290,11 @@
             <div class="result-section shadow-section">
                 <h3>シャドウ（影の側面）</h3>
                 <div id="res-shadow"></div>
+            </div>
+
+            <div class="result-section radar-section">
+                <h3>魂の形状（12原型分布）</h3>
+                <canvas id="radar-chart" width="260" height="260" style="display:block; margin: 5px auto;"></canvas>
             </div>
 
             <div id="res-quote" class="quote-section"></div>
@@ -339,6 +357,7 @@ function playSound(type) {
 }
 
 function transitionTo(targetId, callback) {
+    cancelTypewriter();
     const wrapper = document.getElementById('main-wrapper');
     wrapper.classList.add('fade-out'); 
     
@@ -472,12 +491,28 @@ function updateMinimap() {
 function drawView() {
     updateMinimap();
     ctx.fillStyle = '#080a08'; ctx.fillRect(0, 0, 320, 320);
+
+    // 床・天井スキャンライン（奥行き感）
+    ctx.lineWidth = 0.8;
+    for (let y = 0; y < 320; y += 14) {
+        if (y < 160) {
+            ctx.strokeStyle = `rgba(74, 94, 61, ${(1 - y / 160) * 0.13})`;
+        } else {
+            ctx.strokeStyle = `rgba(197, 169, 99, ${((y - 160) / 160) * 0.07})`;
+        }
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(320, y); ctx.stroke();
+    }
+
     ctx.strokeStyle = '#4a5e3d'; ctx.lineWidth = 1.5;
     let maxD = 3;
     for(let d = 0; d <= 3; d++) { if(getRel(d, 0) === 1) { maxD = d; break; } }
 
+    // 距離別壁カラー（近い=若干明るい緑茶、遠い=ほぼ黒）
+    const wallFills = ['#1c2418', '#141a10', '#0e120c', '#080a08'];
+
     for(let d = maxD; d >= 0; d--) {
         let f = getRel(d, 0), l = getRel(d, -1), r = getRel(d, 1), rd = R[d], rdn = (d < 3) ? R[d+1] : null;
+        ctx.fillStyle = wallFills[Math.min(d, 3)];
 
         if (d < 3) {
             ctx.beginPath();
@@ -500,7 +535,7 @@ function drawView() {
         }
 
         if (d === maxD && f === 1) {
-            ctx.fillStyle = '#080a08'; ctx.fillRect(rd.x, rd.y, rd.w, rd.h); ctx.strokeRect(rd.x, rd.y, rd.w, rd.h);
+            ctx.fillRect(rd.x, rd.y, rd.w, rd.h); ctx.strokeRect(rd.x, rd.y, rd.w, rd.h);
         }
         
         if (d > 0 && f >= 2) {
@@ -589,37 +624,41 @@ function triggerEvent(type) {
     transitionTo('story-ui', () => {
         let titleEl = document.getElementById('event-title');
         let storyEl = document.getElementById('story-text');
-        
-        if (type === 2) { 
+        let choicesEl = document.getElementById('choices-area');
+        choicesEl.innerHTML = '';
+
+        if (type === 2) {
             titleEl.innerText = `【 記憶の残滓 [ ${crystals + 1} / 3 ] 】`;
             let data = currentCrystalPool[crystals];
-            storyEl.innerText = data.story;
-            renderChoices(data.choices, 2);
-        } else if (type === 3) { 
+            typeWriter(storyEl, data.story, 30, () => {
+                renderChoices(data.choices, 2);
+                decisionStartTime = Date.now();
+            });
+        } else if (type === 3) {
             titleEl.innerText = "【 彷徨える影 】";
-            storyEl.innerText = currentNPCEvent.story;
-            renderChoices(currentNPCEvent.choices, 3);
-        } else if (type === 4) { 
+            typeWriter(storyEl, currentNPCEvent.story, 30, () => {
+                renderChoices(currentNPCEvent.choices, 3);
+                decisionStartTime = Date.now();
+            });
+        } else if (type === 4) {
             titleEl.innerText = "【 封印された遺物 】";
-            storyEl.innerText = currentChestEvent.story;
-            renderChoices(currentChestEvent.choices, 4);
-        } else if (type === 5) { 
+            typeWriter(storyEl, currentChestEvent.story, 30, () => {
+                renderChoices(currentChestEvent.choices, 4);
+                decisionStartTime = Date.now();
+            });
+        } else if (type === 5) {
             if (crystals < 3) {
                 titleEl.innerText = "【 閉ざされた扉 】";
-                storyEl.innerText = `冷たく重い鉄の扉が、あなたの行く手を拒絶している。
-失われた記憶の結晶がまだ足りないようだ。
-（現在の結晶: ${crystals} / 3個）`;
-                let choicesEl = document.getElementById('choices-area');
-                choicesEl.innerHTML = '';
-                let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = "引き返す";
-                btn.onclick = () => { dir = (dir + 2) % 4; px += dx[dir]; py += dy[dir]; playSound('step'); transitionTo('dungeon-ui', drawView); };
-                choicesEl.appendChild(btn);
+                const doorText = `冷たく重い鉄の扉が、あなたの行く手を拒絶している。\n失われた記憶の結晶がまだ足りないようだ。\n（現在の結晶: ${crystals} / 3個）`;
+                typeWriter(storyEl, doorText, 30, () => {
+                    let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = "引き返す";
+                    btn.onclick = () => { dir = (dir + 2) % 4; px += dx[dir]; py += dy[dir]; playSound('step'); transitionTo('dungeon-ui', drawView); };
+                    choicesEl.appendChild(btn);
+                });
             } else {
                 startFinalBattle();
-                return; 
             }
         }
-        decisionStartTime = Date.now();
     });
 }
 
@@ -745,34 +784,27 @@ function startFinalBattle() {
             currentTimeTrait = "20秒前後の柔軟なる間合いと立ち回り"; currentTimeGroup = "mid"; 
         }
 
-        let battleText = `鉄の扉を抜けた先。巨大な空間の底で、重厚な足音が響く。
-あなたが無意識の底に切り捨てた影、【<span class="battle-highlight">${data.shadowName}</span>】の具現が立ち塞がった。
+        const battleHtml = `鉄の扉を抜けた先。巨大な空間の底で、重厚な足音が響く。\nあなたが無意識の底に切り捨てた影、【<span class="battle-highlight">${data.shadowName}</span>】の具現が立ち塞がった。\n\n【魂の軌跡】\n迷宮でのあなたの決断平均時間は ${avgSec}秒。\nその『<span class="battle-highlight">${currentTimeTrait}</span>』が、あなたの自我（エゴ）の核となっている。\n\nさあ、名もなき彷徨い人よ。\nこの絶望の影に対して、どう立ち向かう。`;
+        const battlePlain = battleHtml.replace(/<[^>]*>/g, '');
 
-`;
-        battleText += `【魂の軌跡】
-`;
-        battleText += `迷宮でのあなたの決断平均時間は ${avgSec}秒。
-その『<span class="battle-highlight">${currentTimeTrait}</span>』が、あなたの自我（エゴ）の核となっている。
+        const battleEl = document.getElementById('battle-text');
+        const bChoicesEl = document.getElementById('battle-choices');
+        bChoicesEl.innerHTML = '';
 
-`;
-        battleText += `さあ、名もなき彷徨い人よ。
-この絶望の影に対して、どう立ち向かう。`;
-
-        document.getElementById('battle-text').innerHTML = battleText;
-        
-        let battleChoices = [
+        const battleChoices = [
             { text: "武器を構え、影の主を力と意志でねじ伏せる", group: "fast" },
             { text: "影の嘆きを受け入れ、盾を捨ててその刃を身に受ける", group: "slow" },
             { text: "影の攻撃パターンを冷静に見切り、致命の隙を突く", group: "slow" },
             { text: "影の力を利用し、自らの魔術の糧として吸収する", group: "mid" }
         ];
 
-        let choicesEl = document.getElementById('battle-choices');
-        choicesEl.innerHTML = '';
-        battleChoices.forEach(c => {
-            let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = c.text;
-            btn.onclick = () => resolveFinalBattle(c.group);
-            choicesEl.appendChild(btn);
+        typeWriter(battleEl, battlePlain, 22, () => {
+            battleEl.innerHTML = battleHtml;
+            battleChoices.forEach(c => {
+                let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = c.text;
+                btn.onclick = () => resolveFinalBattle(c.group);
+                bChoicesEl.appendChild(btn);
+            });
         });
     });
 }
@@ -806,7 +838,120 @@ function resolveFinalBattle(finalChoiceGroup) {
         document.getElementById('res-desc').innerHTML = `<span style="color:var(--accent-color); font-weight:bold; font-size:1.1rem;">【 ${data.title} 】</span><br><br>${data.desc}`;
         document.getElementById('res-shadow').innerHTML = `<span style="color:var(--accent-red); font-weight:bold; font-size:1.1rem;">【 ${data.shadowName} 】</span><br><br>${data.shadowDesc}`;
         document.getElementById('res-quote').innerText = data.quote;
+        drawRadarChart();
     });
+}
+// --- タイプライターシステム ---
+let _twTimer = null, _twDone = null;
+
+function cancelTypewriter() {
+    if (_twTimer) { clearTimeout(_twTimer); _twTimer = null; }
+    _twDone = null;
+    const h = document.getElementById('skip-hint');
+    if (h) h.classList.remove('visible');
+    ['story-text', 'battle-text'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('typing-cursor');
+    });
+}
+
+function skipTypewriter() {
+    if (!_twDone) return;
+    clearTimeout(_twTimer); _twTimer = null;
+    const done = _twDone; _twDone = null;
+    done();
+}
+
+function typeWriter(el, text, ms, done) {
+    cancelTypewriter();
+    el.textContent = '';
+    el.classList.add('typing-cursor');
+    const h = document.getElementById('skip-hint');
+    if (h) h.classList.add('visible');
+    let i = 0;
+    const finish = () => {
+        el.classList.remove('typing-cursor');
+        el.textContent = text;
+        if (h) h.classList.remove('visible');
+        _twDone = null; _twTimer = null;
+        if (done) done();
+    };
+    _twDone = finish;
+    const tick = () => {
+        if (i < text.length) { el.textContent += text[i++]; _twTimer = setTimeout(tick, ms); }
+        else finish();
+    };
+    tick();
+}
+
+// --- レーダーチャート ---
+const radarTypes  = ['hero','outlaw','ruler','jester','creator','lover','everyman','caregiver','magician','sage','explorer','innocent'];
+const radarLabels = ['英雄','無法者','支配者','道化師','創造者','恋人','一般人','援助者','魔術師','賢者','探求者','無垢'];
+
+function drawRadarChart() {
+    const canvas = document.getElementById('radar-chart');
+    if (!canvas) return;
+    const rc = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const cx = W / 2, cy = H / 2;
+    const maxR = Math.min(cx, cy) - 28;
+    const n = radarTypes.length;
+    const step = (Math.PI * 2) / n;
+    const topScore = Math.max(...Object.values(scores), 1);
+
+    rc.clearRect(0, 0, W, H);
+
+    // グリッドリング
+    for (let ring = 1; ring <= 4; ring++) {
+        rc.beginPath();
+        for (let i = 0; i <= n; i++) {
+            const a = -Math.PI / 2 + i * step;
+            const r = maxR * ring / 4;
+            i === 0 ? rc.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a))
+                    : rc.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+        }
+        rc.closePath();
+        rc.strokeStyle = 'rgba(74, 94, 61, 0.35)'; rc.lineWidth = 0.5; rc.stroke();
+    }
+
+    // 軸線
+    for (let i = 0; i < n; i++) {
+        const a = -Math.PI / 2 + i * step;
+        rc.beginPath(); rc.moveTo(cx, cy);
+        rc.lineTo(cx + maxR * Math.cos(a), cy + maxR * Math.sin(a));
+        rc.strokeStyle = 'rgba(74, 94, 61, 0.3)'; rc.lineWidth = 0.5; rc.stroke();
+    }
+
+    // スコアポリゴン
+    rc.beginPath();
+    for (let i = 0; i < n; i++) {
+        const a = -Math.PI / 2 + i * step;
+        const v = (scores[radarTypes[i]] || 0) / topScore;
+        i === 0 ? rc.moveTo(cx + maxR * v * Math.cos(a), cy + maxR * v * Math.sin(a))
+                : rc.lineTo(cx + maxR * v * Math.cos(a), cy + maxR * v * Math.sin(a));
+    }
+    rc.closePath();
+    rc.fillStyle = 'rgba(197, 169, 99, 0.18)'; rc.fill();
+    rc.strokeStyle = '#c5a963'; rc.lineWidth = 1.5; rc.stroke();
+
+    // ドット＆ラベル
+    for (let i = 0; i < n; i++) {
+        const a = -Math.PI / 2 + i * step;
+        const sc = scores[radarTypes[i]] || 0;
+        const v = sc / topScore;
+        if (sc > 0) {
+            rc.beginPath();
+            rc.arc(cx + maxR * v * Math.cos(a), cy + maxR * v * Math.sin(a), 3, 0, Math.PI * 2);
+            rc.fillStyle = '#c5a963'; rc.fill();
+        }
+        const lx = cx + (maxR + 22) * Math.cos(a);
+        const ly = cy + (maxR + 22) * Math.sin(a);
+        const isTop = sc === topScore && sc > 0;
+        rc.fillStyle = isTop ? '#c5a963' : 'rgba(117, 116, 106, 0.85)';
+        rc.font = `${isTop ? 'bold ' : ''}9px "Hiragino Mincho ProN", serif`;
+        rc.textAlign = 'center'; rc.textBaseline = 'middle';
+        rc.fillText(radarLabels[i], lx, ly);
+    }
 }
 </script>
 </body>
