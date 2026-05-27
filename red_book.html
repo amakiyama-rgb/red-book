@@ -48,12 +48,21 @@
             width: 100%;
             max-width: 550px;
             background-color: var(--panel-color);
+            background-image: repeating-linear-gradient(
+                0deg, transparent, transparent 3px, rgba(0,0,0,0.05) 3px, rgba(0,0,0,0.05) 4px
+            );
             padding: 25px 25px 35px 25px;
             border-radius: 4px;
             box-shadow: 0 0 40px var(--shadow-color);
             border: 1px solid var(--border-color);
             transition: all 2s ease;
             position: relative;
+        }
+        .game-container::before {
+            content: '';
+            position: absolute; top: 0; left: 12%; right: 12%;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--wire-green), transparent);
         }
 
         .btn-mute {
@@ -74,13 +83,18 @@
 
         h1 {
             font-size: 1.35rem;
-            text-align: center;
             color: var(--wire-green);
             margin-top: 5px;
             letter-spacing: 4px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
+            display: flex; align-items: center; gap: 10px;
         }
+        h1::before, h1::after {
+            content: ''; flex: 1; height: 1px;
+        }
+        h1::before { background: linear-gradient(to right, transparent, var(--wire-green)); }
+        h1::after  { background: linear-gradient(to left,  transparent, var(--wire-green)); }
 
         .dungeon-status {
             font-size: 0.95rem;
@@ -117,20 +131,29 @@
             text-align: left;
             font-size: 0.95rem;
             line-height: 1.5;
-            transition: all 0.2s ease;
+            transition: background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
             font-family: inherit;
+            position: relative; overflow: hidden;
         }
-
+        .btn-choice::after {
+            content: '';
+            position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+            background: var(--accent-color);
+            transform: scaleY(0);
+            transition: transform 0.15s ease;
+            transform-origin: bottom;
+        }
+        .btn-choice:hover::after, .btn-choice:focus::after { transform: scaleY(1); }
         .btn-choice:hover, .btn-choice:focus {
-            background-color: #1a1f17;
+            background: linear-gradient(to right, rgba(74,94,61,0.2) 0%, #1a1f17 55%);
             color: var(--accent-color);
             border-color: var(--wire-green);
             transform: translateY(-1px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.7), -2px 0 0 var(--accent-color);
             outline: none;
         }
 
-        .view-wrapper { transition: opacity 0.5s ease; opacity: 1; }
+        .view-wrapper { transition: opacity 0.18s ease; opacity: 1; }
         .view-wrapper.fade-out { opacity: 0; pointer-events: none; }
 
         #prologue-ui, #story-ui, #result-ui, #battle-ui { display: none; }
@@ -143,7 +166,8 @@
         
         canvas#view3d {
             background-color: #000; border: 2px solid var(--wire-green);
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.8); image-rendering: pixelated;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8), 0 0 18px rgba(74,94,61,0.25);
+            image-rendering: pixelated;
             width: 100%; height: auto; display: block; border-radius: 4px;
         }
         
@@ -157,14 +181,23 @@
         
         .btn-move {
             background: #0b0c0a; color: var(--text-muted); border: 1px solid var(--border-color);
-            padding: 15px 5px; font-size: 1rem; cursor: pointer; border-radius: 4px; font-weight: bold;
-            flex: 1; transition: all 0.1s; text-align: center;
+            padding: 15px 5px; font-size: 1.1rem; cursor: pointer; border-radius: 4px; font-weight: bold;
+            flex: 1; transition: all 0.1s; text-align: center; letter-spacing: 1px;
         }
+        .btn-move:hover { background: rgba(74,94,61,0.15); color: var(--accent-color); border-color: var(--wire-green); }
         .btn-move:active { background: var(--wire-green); color: #fff; transform: scale(0.95); }
 
-        .result-title { font-size: 1.8rem; text-align: center; letter-spacing: 4px; margin: 25px 0; font-weight: bold; }
-        .victory-title { color: var(--accent-color); text-shadow: 0 0 10px rgba(197, 169, 99, 0.5); } 
-        .defeat-title { color: var(--accent-red); text-shadow: 0 0 10px rgba(168, 50, 50, 0.5); }  
+        .result-title { font-size: 1.9rem; text-align: center; letter-spacing: 4px; margin: 25px 0; font-weight: bold; }
+        .victory-title { color: var(--accent-color); animation: victory-glow 2.5s ease-in-out infinite; }
+        .defeat-title  { color: var(--accent-red);   animation: defeat-glow  2.5s ease-in-out infinite; }
+        @keyframes victory-glow {
+            0%,100% { text-shadow: 0 0 10px rgba(229,201,115,0.4); }
+            50%      { text-shadow: 0 0 26px rgba(229,201,115,0.95), 0 0 55px rgba(229,201,115,0.25); }
+        }
+        @keyframes defeat-glow {
+            0%,100% { text-shadow: 0 0 10px rgba(168,50,50,0.4); }
+            50%      { text-shadow: 0 0 26px rgba(168,50,50,0.95), 0 0 55px rgba(168,50,50,0.25); }
+        }
 
         .result-section {
             background: rgba(0,0,0,0.4); padding: 20px; border-radius: 4px;
@@ -177,8 +210,15 @@
 
         .quote-section {
             text-align: center; font-style: italic; color: var(--accent-color);
-            padding: 25px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
-            margin: 30px 0; font-size: 1rem; line-height: 1.8;
+            padding: 28px 45px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+            margin: 30px 0; font-size: 1rem; line-height: 1.9;
+            position: relative;
+        }
+        .quote-section::before {
+            content: '❝';
+            position: absolute; top: 8px; left: 14px;
+            font-size: 3rem; color: var(--wire-green); opacity: 0.18;
+            line-height: 1; font-family: serif; font-style: normal;
         }
 
         #audio-overlay {
@@ -198,12 +238,77 @@
         .battle-text-area {
             background: rgba(168, 50, 50, 0.1);
             border-left: 4px solid var(--accent-red);
-            padding: 15px;
+            padding: 18px 18px 18px 20px;
             border-radius: 0 4px 4px 0;
-            color: #e8e6d9; 
+            color: #e8e6d9;
             margin-bottom: 25px;
+            animation: battle-pulse 2.8s ease-in-out infinite;
+        }
+        @keyframes battle-pulse {
+            0%,100% { border-left-color: var(--accent-red); box-shadow: none; }
+            50%      { border-left-color: #d95050; box-shadow: -3px 0 10px rgba(168,50,50,0.35); }
         }
         .battle-highlight { color: #ffb3b3; font-weight: bold; }
+
+        .skip-hint {
+            text-align: center; font-size: 0.75rem; color: var(--text-muted);
+            margin-top: -15px; margin-bottom: 15px; letter-spacing: 1px;
+            opacity: 0; transition: opacity 0.4s; pointer-events: none;
+        }
+        .skip-hint.visible { opacity: 1; }
+        .typing-cursor::after { content: '▎'; color: var(--accent-color); animation: cur-blink 0.7s step-end infinite; }
+        @keyframes cur-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        .radar-section { border-left: 3px solid var(--wire-green); }
+        .radar-section h3 { color: var(--wire-green); }
+
+        /* イベントタイトル専用 */
+        #event-title {
+            background: rgba(74,94,61,0.09);
+            border-left: 3px solid var(--wire-green);
+            text-align: left; padding: 10px 15px;
+            border-radius: 0 4px 4px 0;
+            margin-bottom: 22px;
+        }
+
+        /* リザルトセクション見出し */
+        .result-section h3 {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .result-section h3::after {
+            content: ''; flex: 1; height: 1px;
+            background: var(--border-color);
+        }
+
+        /* 開始ボタン */
+        .btn-start {
+            position: relative; overflow: hidden;
+        }
+        .btn-start::after {
+            content: '';
+            position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+            background: var(--wire-green);
+            transform: scaleX(0); transition: transform 0.25s ease;
+        }
+        .btn-start:hover::after { transform: scaleX(1); }
+
+        /* プロローグガイド */
+        .prologue-guide {
+            background: rgba(74,94,61,0.06);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--wire-green);
+            padding: 15px 18px;
+            margin: 0 0 25px 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.88rem;
+            line-height: 2.0;
+            color: var(--text-muted);
+        }
+        .prologue-guide p { margin: 4px 0; }
+        .guide-rule {
+            color: var(--wire-green); letter-spacing: 3px;
+            font-size: 0.82rem; margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -229,6 +334,13 @@
 
                 失われた本当の自己を取り戻すため、この薄暗い書架の迷宮を歩き、「記憶の結晶」を集めよ。
                 だが警戒しろ。淀んだ暗がりには、あなたがかつて切り捨て、押し殺した『己の影』が蠢いている。
+            </div>
+            <div class="prologue-guide">
+                <div class="guide-rule">〈 迷宮の掟 〉</div>
+                <p>ボタン、またはキーボード（W・A・D ／ 矢印キー）で書架を探索し、「記憶の結晶」を三つ集めよ。</p>
+                <p>迷宮で出会う問いへの答えは、汝の魂に静かに刻まれていく。<br>
+                何を選ぶか。そして——その選択に己が費やした<em>時の重さ</em>もまた、<br>
+                深淵の影との最終決戦の行方を、密かに左右するだろう。</p>
             </div>
             <div style="text-align: center; margin-top: 20px;">
                 <button class="btn-start" onclick="transitionTo('dungeon-ui', drawView)">図書館の扉を開く</button>
@@ -277,6 +389,11 @@
             <div class="result-section shadow-section">
                 <h3>シャドウ（影の側面）</h3>
                 <div id="res-shadow"></div>
+            </div>
+
+            <div class="result-section radar-section">
+                <h3>魂の形状（12原型分布）</h3>
+                <canvas id="radar-chart" width="260" height="260" style="display:block; margin: 5px auto;"></canvas>
             </div>
 
             <div id="res-quote" class="quote-section"></div>
@@ -338,7 +455,112 @@ function playSound(type) {
     osc.stop(audioCtx.currentTime + 2.5);
 }
 
+// --- BGMシステム ---
+let bgmOscs = [], bgmGains = [], bgmTimer = null, bgmArpIdx = 0;
+
+function stopBgm(fadeTime = 0.6) {
+    if (bgmTimer) { clearTimeout(bgmTimer); bgmTimer = null; }
+    if (!audioCtx) { bgmOscs = []; bgmGains = []; bgmArpIdx = 0; return; }
+    const stopAt = audioCtx.currentTime + fadeTime;
+    bgmGains.forEach(g => { try { g.gain.linearRampToValueAtTime(0, stopAt); } catch(e) {} });
+    bgmOscs.forEach(o => { try { o.stop(stopAt + 0.05); } catch(e) {} });
+    bgmOscs = []; bgmGains = []; bgmArpIdx = 0;
+}
+
+// ラスボス専用BGM（Aマイナー：神秘的・重厚）
+const BATTLE_ARP = [110, 130.81, 164.81, 196, 220, 196, 164.81, 146.83];
+function startBattleBgm() {
+    if (!audioCtx) return;
+    stopBgm(0.4);
+    if (ambientGain) {
+        ambientGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        ambientGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.5);
+    }
+    const master = audioCtx.createGain();
+    master.gain.setValueAtTime(0, audioCtx.currentTime);
+    master.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 2.5);
+    master.connect(audioCtx.destination);
+    bgmGains.push(master);
+
+    // 低音ドローン（sawtooth A1）
+    const drone = audioCtx.createOscillator();
+    const droneG = audioCtx.createGain();
+    drone.type = 'sawtooth'; drone.frequency.value = 55;
+    droneG.gain.value = 0.08;
+    drone.connect(droneG); droneG.connect(master);
+    drone.start(); bgmOscs.push(drone); bgmGains.push(droneG);
+
+    // トレモロLFO
+    const lfo = audioCtx.createOscillator();
+    const lfoG = audioCtx.createGain();
+    lfo.type = 'sine'; lfo.frequency.value = 1.8;
+    lfoG.gain.value = 0.028;
+    lfo.connect(lfoG); lfoG.connect(droneG.gain);
+    lfo.start(); bgmOscs.push(lfo);
+
+    // 五度上ドローン（E1）
+    const fifth = audioCtx.createOscillator();
+    const fifthG = audioCtx.createGain();
+    fifth.type = 'sawtooth'; fifth.frequency.value = 82.41;
+    fifthG.gain.value = 0.045;
+    fifth.connect(fifthG); fifthG.connect(master);
+    fifth.start(); bgmOscs.push(fifth); bgmGains.push(fifthG);
+
+    scheduleBattleArp(master);
+}
+function scheduleBattleArp(dest) {
+    if (!audioCtx || bgmOscs.length === 0) return;
+    const freq = BATTLE_ARP[bgmArpIdx % BATTLE_ARP.length];
+    bgmArpIdx++;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.065, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.65);
+    osc.connect(gain); gain.connect(dest);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.7);
+    bgmTimer = setTimeout(() => scheduleBattleArp(dest), 440);
+}
+
+// リザルト専用BGM（Cメジャー：穏やか・内省的）
+const RESULT_MELODY = [392, 440, 493.88, 523.25, 587.33, 523.25, 493.88, 440];
+function startResultBgm() {
+    if (!audioCtx) return;
+    stopBgm(0.8);
+    const master = audioCtx.createGain();
+    master.gain.setValueAtTime(0, audioCtx.currentTime);
+    master.gain.linearRampToValueAtTime(0.85, audioCtx.currentTime + 3);
+    master.connect(audioCtx.destination);
+    bgmGains.push(master);
+
+    // 穏やかなCメジャーパッド（C3 E3 G3 C4）
+    [[130.81, 0.05], [164.81, 0.042], [196, 0.042], [261.63, 0.036]].forEach(([f, v]) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.value = f;
+        g.gain.value = v;
+        osc.connect(g); g.connect(master);
+        osc.start(); bgmOscs.push(osc); bgmGains.push(g);
+    });
+    scheduleResultMelody(master);
+}
+function scheduleResultMelody(dest) {
+    if (!audioCtx || bgmOscs.length === 0) return;
+    const freq = RESULT_MELODY[bgmArpIdx % RESULT_MELODY.length];
+    bgmArpIdx++;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.062, audioCtx.currentTime + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.4);
+    osc.connect(gain); gain.connect(dest);
+    osc.start(); osc.stop(audioCtx.currentTime + 1.5);
+    bgmTimer = setTimeout(() => scheduleResultMelody(dest), 1050);
+}
+
 function transitionTo(targetId, callback) {
+    cancelTypewriter();
     const wrapper = document.getElementById('main-wrapper');
     wrapper.classList.add('fade-out'); 
     
@@ -354,7 +576,7 @@ function transitionTo(targetId, callback) {
         
         document.getElementById('game-top').scrollIntoView({ behavior: 'auto' });
         wrapper.classList.remove('fade-out');
-    }, 500); 
+    }, 180);
 }
 
 // --- ランダムイベントプール ---
@@ -413,7 +635,7 @@ function resetGameState() {
     discovered = Array.from({length: 11}, () => Array(11).fill(false));
     scores = { innocent:0, explorer:0, sage:0, hero:0, outlaw:0, magician:0, everyman:0, lover:0, jester:0, caregiver:0, creator:0, ruler:0 };
     crystals = 0; decisionTimes = [];
-    document.getElementById('dungeon-status').innerText = `記憶の結晶 [ 0 / 3 ]`;
+    updateCrystalStatus();
     document.body.classList.remove('victory-theme');
 
     let emptyCells = [];
@@ -472,12 +694,28 @@ function updateMinimap() {
 function drawView() {
     updateMinimap();
     ctx.fillStyle = '#080a08'; ctx.fillRect(0, 0, 320, 320);
+
+    // 床・天井スキャンライン（奥行き感）
+    ctx.lineWidth = 0.8;
+    for (let y = 0; y < 320; y += 14) {
+        if (y < 160) {
+            ctx.strokeStyle = `rgba(74, 94, 61, ${(1 - y / 160) * 0.13})`;
+        } else {
+            ctx.strokeStyle = `rgba(197, 169, 99, ${((y - 160) / 160) * 0.07})`;
+        }
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(320, y); ctx.stroke();
+    }
+
     ctx.strokeStyle = '#4a5e3d'; ctx.lineWidth = 1.5;
     let maxD = 3;
     for(let d = 0; d <= 3; d++) { if(getRel(d, 0) === 1) { maxD = d; break; } }
 
+    // 距離別壁カラー（近い=若干明るい緑茶、遠い=ほぼ黒）
+    const wallFills = ['#1c2418', '#141a10', '#0e120c', '#080a08'];
+
     for(let d = maxD; d >= 0; d--) {
         let f = getRel(d, 0), l = getRel(d, -1), r = getRel(d, 1), rd = R[d], rdn = (d < 3) ? R[d+1] : null;
+        ctx.fillStyle = wallFills[Math.min(d, 3)];
 
         if (d < 3) {
             ctx.beginPath();
@@ -500,7 +738,7 @@ function drawView() {
         }
 
         if (d === maxD && f === 1) {
-            ctx.fillStyle = '#080a08'; ctx.fillRect(rd.x, rd.y, rd.w, rd.h); ctx.strokeRect(rd.x, rd.y, rd.w, rd.h);
+            ctx.fillRect(rd.x, rd.y, rd.w, rd.h); ctx.strokeRect(rd.x, rd.y, rd.w, rd.h);
         }
         
         if (d > 0 && f >= 2) {
@@ -548,6 +786,11 @@ function startGame() {
 
 function restartGame() {
     playSound('step');
+    stopBgm(0.5);
+    if (ambientGain && audioCtx) {
+        ambientGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        ambientGain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 1.5);
+    }
     resetGameState();
     transitionTo('prologue-ui');
 }
@@ -575,7 +818,7 @@ function renderChoices(choices, typeId) {
             decisionTimes.push(timeTaken);
             
             scores[c.type]++; 
-            if(typeId === 2) { crystals++; document.getElementById('dungeon-status').innerText = `記憶の結晶 [ ${crystals} / 3 ]`; }
+            if(typeId === 2) { crystals++; updateCrystalStatus(); }
             map[py][px] = 0; 
             playSound('step');
             transitionTo('dungeon-ui', drawView);
@@ -589,34 +832,31 @@ function triggerEvent(type) {
     transitionTo('story-ui', () => {
         let titleEl = document.getElementById('event-title');
         let storyEl = document.getElementById('story-text');
-        
-        if (type === 2) { 
+        let choicesEl = document.getElementById('choices-area');
+        choicesEl.innerHTML = '';
+
+        if (type === 2) {
             titleEl.innerText = `【 記憶の残滓 [ ${crystals + 1} / 3 ] 】`;
             let data = currentCrystalPool[crystals];
             storyEl.innerText = data.story;
             renderChoices(data.choices, 2);
-        } else if (type === 3) { 
+        } else if (type === 3) {
             titleEl.innerText = "【 彷徨える影 】";
             storyEl.innerText = currentNPCEvent.story;
             renderChoices(currentNPCEvent.choices, 3);
-        } else if (type === 4) { 
+        } else if (type === 4) {
             titleEl.innerText = "【 封印された遺物 】";
             storyEl.innerText = currentChestEvent.story;
             renderChoices(currentChestEvent.choices, 4);
-        } else if (type === 5) { 
+        } else if (type === 5) {
             if (crystals < 3) {
                 titleEl.innerText = "【 閉ざされた扉 】";
-                storyEl.innerText = `冷たく重い鉄の扉が、あなたの行く手を拒絶している。
-失われた記憶の結晶がまだ足りないようだ。
-（現在の結晶: ${crystals} / 3個）`;
-                let choicesEl = document.getElementById('choices-area');
-                choicesEl.innerHTML = '';
+                storyEl.innerText = `冷たく重い鉄の扉が、あなたの行く手を拒絶している。\n失われた記憶の結晶がまだ足りないようだ。\n（現在の結晶: ${crystals} / 3個）`;
                 let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = "引き返す";
                 btn.onclick = () => { dir = (dir + 2) % 4; px += dx[dir]; py += dy[dir]; playSound('step'); transitionTo('dungeon-ui', drawView); };
                 choicesEl.appendChild(btn);
             } else {
                 startFinalBattle();
-                return; 
             }
         }
         decisionStartTime = Date.now();
@@ -729,7 +969,8 @@ let currentHighestType = null, currentTimeTrait = "", currentTimeGroup = "";
 
 function startFinalBattle() {
     playSound('battle');
-    
+    startBattleBgm();
+
     transitionTo('battle-ui', () => {
         currentHighestType = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
         let data = archetypeData[currentHighestType];
@@ -737,42 +978,31 @@ function startFinalBattle() {
         let avgTime = decisionTimes.length > 0 ? (decisionTimes.reduce((a,b)=>a+b, 0) / decisionTimes.length) : 20000;
         let avgSec = (avgTime / 1000).toFixed(1);
 
-        if (avgTime < 12000) { 
-            currentTimeTrait = "直感と電光石火の速さ（12秒未満）"; currentTimeGroup = "fast"; 
-        } else if (avgTime > 28000) { 
-            currentTimeTrait = "深き熟考と慎重なる歩み（28秒以上）"; currentTimeGroup = "slow"; 
-        } else { 
-            currentTimeTrait = "20秒前後の柔軟なる間合いと立ち回り"; currentTimeGroup = "mid"; 
+        if (avgTime < 12000) {
+            currentTimeTrait = "直感と電光石火の速さ"; currentTimeGroup = "fast";
+        } else if (avgTime > 28000) {
+            currentTimeTrait = "深き熟考と慎重なる歩み"; currentTimeGroup = "slow";
+        } else {
+            currentTimeTrait = "柔軟なる間合いと立ち回り"; currentTimeGroup = "mid";
         }
 
-        let battleText = `鉄の扉を抜けた先。巨大な空間の底で、重厚な足音が響く。
-あなたが無意識の底に切り捨てた影、【<span class="battle-highlight">${data.shadowName}</span>】の具現が立ち塞がった。
+        const battleHtml = `鉄の扉を抜けた先。巨大な空間の底で、重厚な足音が響く。\nあなたが無意識の底に切り捨てた影、【<span class="battle-highlight">${data.shadowName}</span>】の具現が立ち塞がった。\n\n【魂の軌跡】\nその『<span class="battle-highlight">${currentTimeTrait}</span>』が、あなたの自我（エゴ）の核となっている。\n\nさあ、名もなき彷徨い人よ。\nこの絶望の影に対して、どう立ち向かう。`;
 
-`;
-        battleText += `【魂の軌跡】
-`;
-        battleText += `迷宮でのあなたの決断平均時間は ${avgSec}秒。
-その『<span class="battle-highlight">${currentTimeTrait}</span>』が、あなたの自我（エゴ）の核となっている。
+        document.getElementById('battle-text').innerHTML = battleHtml;
 
-`;
-        battleText += `さあ、名もなき彷徨い人よ。
-この絶望の影に対して、どう立ち向かう。`;
-
-        document.getElementById('battle-text').innerHTML = battleText;
-        
-        let battleChoices = [
+        const battleChoices = [
             { text: "武器を構え、影の主を力と意志でねじ伏せる", group: "fast" },
             { text: "影の嘆きを受け入れ、盾を捨ててその刃を身に受ける", group: "slow" },
             { text: "影の攻撃パターンを冷静に見切り、致命の隙を突く", group: "slow" },
             { text: "影の力を利用し、自らの魔術の糧として吸収する", group: "mid" }
         ];
 
-        let choicesEl = document.getElementById('battle-choices');
-        choicesEl.innerHTML = '';
+        const bChoicesEl = document.getElementById('battle-choices');
+        bChoicesEl.innerHTML = '';
         battleChoices.forEach(c => {
             let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = c.text;
             btn.onclick = () => resolveFinalBattle(c.group);
-            choicesEl.appendChild(btn);
+            bChoicesEl.appendChild(btn);
         });
     });
 }
@@ -786,6 +1016,7 @@ function resolveFinalBattle(finalChoiceGroup) {
     let isVictory = (winPoints >= 2);
 
     transitionTo('result-ui', () => {
+        startResultBgm();
         let titleEl = document.getElementById('res-title');
         let narrativeEl = document.getElementById('res-narrative');
 
@@ -806,7 +1037,126 @@ function resolveFinalBattle(finalChoiceGroup) {
         document.getElementById('res-desc').innerHTML = `<span style="color:var(--accent-color); font-weight:bold; font-size:1.1rem;">【 ${data.title} 】</span><br><br>${data.desc}`;
         document.getElementById('res-shadow').innerHTML = `<span style="color:var(--accent-red); font-weight:bold; font-size:1.1rem;">【 ${data.shadowName} 】</span><br><br>${data.shadowDesc}`;
         document.getElementById('res-quote').innerText = data.quote;
+        drawRadarChart();
     });
+}
+function updateCrystalStatus() {
+    const filled = '◆'.repeat(crystals);
+    const empty  = '◇'.repeat(3 - crystals);
+    document.getElementById('dungeon-status').innerText = `記憶の結晶　${filled}${empty}`;
+}
+
+// --- タイプライターシステム ---
+let _twTimer = null, _twDone = null;
+
+function cancelTypewriter() {
+    if (_twTimer) { clearTimeout(_twTimer); _twTimer = null; }
+    _twDone = null;
+    const h = document.getElementById('skip-hint');
+    if (h) h.classList.remove('visible');
+    ['story-text', 'battle-text'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('typing-cursor');
+    });
+}
+
+function skipTypewriter() {
+    if (!_twDone) return;
+    clearTimeout(_twTimer); _twTimer = null;
+    const done = _twDone; _twDone = null;
+    done();
+}
+
+function typeWriter(el, text, ms, done) {
+    cancelTypewriter();
+    el.textContent = '';
+    el.classList.add('typing-cursor');
+    const h = document.getElementById('skip-hint');
+    if (h) h.classList.add('visible');
+    let i = 0;
+    const finish = () => {
+        el.classList.remove('typing-cursor');
+        el.textContent = text;
+        if (h) h.classList.remove('visible');
+        _twDone = null; _twTimer = null;
+        if (done) done();
+    };
+    _twDone = finish;
+    const tick = () => {
+        if (i < text.length) { el.textContent += text[i++]; _twTimer = setTimeout(tick, ms); }
+        else finish();
+    };
+    tick();
+}
+
+// --- レーダーチャート ---
+const radarTypes  = ['hero','outlaw','ruler','jester','creator','lover','everyman','caregiver','magician','sage','explorer','innocent'];
+const radarLabels = ['英雄','無法者','支配者','道化師','創造者','恋人','一般人','援助者','魔術師','賢者','探求者','無垢'];
+
+function drawRadarChart() {
+    const canvas = document.getElementById('radar-chart');
+    if (!canvas) return;
+    const rc = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const cx = W / 2, cy = H / 2;
+    const maxR = Math.min(cx, cy) - 28;
+    const n = radarTypes.length;
+    const step = (Math.PI * 2) / n;
+    const topScore = Math.max(...Object.values(scores), 1);
+
+    rc.clearRect(0, 0, W, H);
+
+    // グリッドリング
+    for (let ring = 1; ring <= 4; ring++) {
+        rc.beginPath();
+        for (let i = 0; i <= n; i++) {
+            const a = -Math.PI / 2 + i * step;
+            const r = maxR * ring / 4;
+            i === 0 ? rc.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a))
+                    : rc.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+        }
+        rc.closePath();
+        rc.strokeStyle = 'rgba(74, 94, 61, 0.35)'; rc.lineWidth = 0.5; rc.stroke();
+    }
+
+    // 軸線
+    for (let i = 0; i < n; i++) {
+        const a = -Math.PI / 2 + i * step;
+        rc.beginPath(); rc.moveTo(cx, cy);
+        rc.lineTo(cx + maxR * Math.cos(a), cy + maxR * Math.sin(a));
+        rc.strokeStyle = 'rgba(74, 94, 61, 0.3)'; rc.lineWidth = 0.5; rc.stroke();
+    }
+
+    // スコアポリゴン
+    rc.beginPath();
+    for (let i = 0; i < n; i++) {
+        const a = -Math.PI / 2 + i * step;
+        const v = (scores[radarTypes[i]] || 0) / topScore;
+        i === 0 ? rc.moveTo(cx + maxR * v * Math.cos(a), cy + maxR * v * Math.sin(a))
+                : rc.lineTo(cx + maxR * v * Math.cos(a), cy + maxR * v * Math.sin(a));
+    }
+    rc.closePath();
+    rc.fillStyle = 'rgba(197, 169, 99, 0.18)'; rc.fill();
+    rc.strokeStyle = '#c5a963'; rc.lineWidth = 1.5; rc.stroke();
+
+    // ドット＆ラベル
+    for (let i = 0; i < n; i++) {
+        const a = -Math.PI / 2 + i * step;
+        const sc = scores[radarTypes[i]] || 0;
+        const v = sc / topScore;
+        if (sc > 0) {
+            rc.beginPath();
+            rc.arc(cx + maxR * v * Math.cos(a), cy + maxR * v * Math.sin(a), 3, 0, Math.PI * 2);
+            rc.fillStyle = '#c5a963'; rc.fill();
+        }
+        const lx = cx + (maxR + 22) * Math.cos(a);
+        const ly = cy + (maxR + 22) * Math.sin(a);
+        const isTop = sc === topScore && sc > 0;
+        rc.fillStyle = isTop ? '#c5a963' : 'rgba(117, 116, 106, 0.85)';
+        rc.font = `${isTop ? 'bold ' : ''}9px "Hiragino Mincho ProN", serif`;
+        rc.textAlign = 'center'; rc.textBaseline = 'middle';
+        rc.fillText(radarLabels[i], lx, ly);
+    }
 }
 </script>
 </body>
