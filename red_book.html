@@ -48,12 +48,21 @@
             width: 100%;
             max-width: 550px;
             background-color: var(--panel-color);
+            background-image: repeating-linear-gradient(
+                0deg, transparent, transparent 3px, rgba(0,0,0,0.05) 3px, rgba(0,0,0,0.05) 4px
+            );
             padding: 25px 25px 35px 25px;
             border-radius: 4px;
             box-shadow: 0 0 40px var(--shadow-color);
             border: 1px solid var(--border-color);
             transition: all 2s ease;
             position: relative;
+        }
+        .game-container::before {
+            content: '';
+            position: absolute; top: 0; left: 12%; right: 12%;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--wire-green), transparent);
         }
 
         .btn-mute {
@@ -74,13 +83,18 @@
 
         h1 {
             font-size: 1.35rem;
-            text-align: center;
             color: var(--wire-green);
             margin-top: 5px;
             letter-spacing: 4px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
+            display: flex; align-items: center; gap: 10px;
         }
+        h1::before, h1::after {
+            content: ''; flex: 1; height: 1px;
+        }
+        h1::before { background: linear-gradient(to right, transparent, var(--wire-green)); }
+        h1::after  { background: linear-gradient(to left,  transparent, var(--wire-green)); }
 
         .dungeon-status {
             font-size: 0.95rem;
@@ -117,20 +131,29 @@
             text-align: left;
             font-size: 0.95rem;
             line-height: 1.5;
-            transition: all 0.2s ease;
+            transition: background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
             font-family: inherit;
+            position: relative; overflow: hidden;
         }
-
+        .btn-choice::after {
+            content: '';
+            position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+            background: var(--accent-color);
+            transform: scaleY(0);
+            transition: transform 0.15s ease;
+            transform-origin: bottom;
+        }
+        .btn-choice:hover::after, .btn-choice:focus::after { transform: scaleY(1); }
         .btn-choice:hover, .btn-choice:focus {
-            background-color: #1a1f17;
+            background: linear-gradient(to right, rgba(74,94,61,0.2) 0%, #1a1f17 55%);
             color: var(--accent-color);
             border-color: var(--wire-green);
             transform: translateY(-1px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.7), -2px 0 0 var(--accent-color);
             outline: none;
         }
 
-        .view-wrapper { transition: opacity 0.5s ease; opacity: 1; }
+        .view-wrapper { transition: opacity 0.18s ease; opacity: 1; }
         .view-wrapper.fade-out { opacity: 0; pointer-events: none; }
 
         #prologue-ui, #story-ui, #result-ui, #battle-ui { display: none; }
@@ -143,7 +166,8 @@
         
         canvas#view3d {
             background-color: #000; border: 2px solid var(--wire-green);
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.8); image-rendering: pixelated;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8), 0 0 18px rgba(74,94,61,0.25);
+            image-rendering: pixelated;
             width: 100%; height: auto; display: block; border-radius: 4px;
         }
         
@@ -157,14 +181,23 @@
         
         .btn-move {
             background: #0b0c0a; color: var(--text-muted); border: 1px solid var(--border-color);
-            padding: 15px 5px; font-size: 1rem; cursor: pointer; border-radius: 4px; font-weight: bold;
-            flex: 1; transition: all 0.1s; text-align: center;
+            padding: 15px 5px; font-size: 1.1rem; cursor: pointer; border-radius: 4px; font-weight: bold;
+            flex: 1; transition: all 0.1s; text-align: center; letter-spacing: 1px;
         }
+        .btn-move:hover { background: rgba(74,94,61,0.15); color: var(--accent-color); border-color: var(--wire-green); }
         .btn-move:active { background: var(--wire-green); color: #fff; transform: scale(0.95); }
 
-        .result-title { font-size: 1.8rem; text-align: center; letter-spacing: 4px; margin: 25px 0; font-weight: bold; }
-        .victory-title { color: var(--accent-color); text-shadow: 0 0 10px rgba(197, 169, 99, 0.5); } 
-        .defeat-title { color: var(--accent-red); text-shadow: 0 0 10px rgba(168, 50, 50, 0.5); }  
+        .result-title { font-size: 1.9rem; text-align: center; letter-spacing: 4px; margin: 25px 0; font-weight: bold; }
+        .victory-title { color: var(--accent-color); animation: victory-glow 2.5s ease-in-out infinite; }
+        .defeat-title  { color: var(--accent-red);   animation: defeat-glow  2.5s ease-in-out infinite; }
+        @keyframes victory-glow {
+            0%,100% { text-shadow: 0 0 10px rgba(229,201,115,0.4); }
+            50%      { text-shadow: 0 0 26px rgba(229,201,115,0.95), 0 0 55px rgba(229,201,115,0.25); }
+        }
+        @keyframes defeat-glow {
+            0%,100% { text-shadow: 0 0 10px rgba(168,50,50,0.4); }
+            50%      { text-shadow: 0 0 26px rgba(168,50,50,0.95), 0 0 55px rgba(168,50,50,0.25); }
+        }
 
         .result-section {
             background: rgba(0,0,0,0.4); padding: 20px; border-radius: 4px;
@@ -177,8 +210,15 @@
 
         .quote-section {
             text-align: center; font-style: italic; color: var(--accent-color);
-            padding: 25px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
-            margin: 30px 0; font-size: 1rem; line-height: 1.8;
+            padding: 28px 45px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+            margin: 30px 0; font-size: 1rem; line-height: 1.9;
+            position: relative;
+        }
+        .quote-section::before {
+            content: '❝';
+            position: absolute; top: 8px; left: 14px;
+            font-size: 3rem; color: var(--wire-green); opacity: 0.18;
+            line-height: 1; font-family: serif; font-style: normal;
         }
 
         #audio-overlay {
@@ -198,10 +238,15 @@
         .battle-text-area {
             background: rgba(168, 50, 50, 0.1);
             border-left: 4px solid var(--accent-red);
-            padding: 15px;
+            padding: 18px 18px 18px 20px;
             border-radius: 0 4px 4px 0;
-            color: #e8e6d9; 
+            color: #e8e6d9;
             margin-bottom: 25px;
+            animation: battle-pulse 2.8s ease-in-out infinite;
+        }
+        @keyframes battle-pulse {
+            0%,100% { border-left-color: var(--accent-red); box-shadow: none; }
+            50%      { border-left-color: #d95050; box-shadow: -3px 0 10px rgba(168,50,50,0.35); }
         }
         .battle-highlight { color: #ffb3b3; font-weight: bold; }
 
@@ -216,6 +261,36 @@
 
         .radar-section { border-left: 3px solid var(--wire-green); }
         .radar-section h3 { color: var(--wire-green); }
+
+        /* イベントタイトル専用 */
+        #event-title {
+            background: rgba(74,94,61,0.09);
+            border-left: 3px solid var(--wire-green);
+            text-align: left; padding: 10px 15px;
+            border-radius: 0 4px 4px 0;
+            margin-bottom: 22px;
+        }
+
+        /* リザルトセクション見出し */
+        .result-section h3 {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .result-section h3::after {
+            content: ''; flex: 1; height: 1px;
+            background: var(--border-color);
+        }
+
+        /* 開始ボタン */
+        .btn-start {
+            position: relative; overflow: hidden;
+        }
+        .btn-start::after {
+            content: '';
+            position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+            background: var(--wire-green);
+            transform: scaleX(0); transition: transform 0.25s ease;
+        }
+        .btn-start:hover::after { transform: scaleX(1); }
     </style>
 </head>
 <body>
@@ -372,7 +447,7 @@ function transitionTo(targetId, callback) {
         
         document.getElementById('game-top').scrollIntoView({ behavior: 'auto' });
         wrapper.classList.remove('fade-out');
-    }, 500); 
+    }, 180);
 }
 
 // --- ランダムイベントプール ---
@@ -431,7 +506,7 @@ function resetGameState() {
     discovered = Array.from({length: 11}, () => Array(11).fill(false));
     scores = { innocent:0, explorer:0, sage:0, hero:0, outlaw:0, magician:0, everyman:0, lover:0, jester:0, caregiver:0, creator:0, ruler:0 };
     crystals = 0; decisionTimes = [];
-    document.getElementById('dungeon-status').innerText = `記憶の結晶 [ 0 / 3 ]`;
+    updateCrystalStatus();
     document.body.classList.remove('victory-theme');
 
     let emptyCells = [];
@@ -609,7 +684,7 @@ function renderChoices(choices, typeId) {
             decisionTimes.push(timeTaken);
             
             scores[c.type]++; 
-            if(typeId === 2) { crystals++; document.getElementById('dungeon-status').innerText = `記憶の結晶 [ ${crystals} / 3 ]`; }
+            if(typeId === 2) { crystals++; updateCrystalStatus(); }
             map[py][px] = 0; 
             playSound('step');
             transitionTo('dungeon-ui', drawView);
@@ -829,6 +904,12 @@ function resolveFinalBattle(finalChoiceGroup) {
         drawRadarChart();
     });
 }
+function updateCrystalStatus() {
+    const filled = '◆'.repeat(crystals);
+    const empty  = '◇'.repeat(3 - crystals);
+    document.getElementById('dungeon-status').innerText = `記憶の結晶　${filled}${empty}`;
+}
+
 // --- タイプライターシステム ---
 let _twTimer = null, _twDone = null;
 
