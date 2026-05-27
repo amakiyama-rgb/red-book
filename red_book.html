@@ -262,15 +262,14 @@
         </div>
 
         <!-- イベント画面 -->
-        <div id="story-ui" onclick="skipTypewriter()">
+        <div id="story-ui">
             <div class="dungeon-status" id="event-title"></div>
             <div id="story-text" class="story-text"></div>
-            <div id="skip-hint" class="skip-hint">クリックでスキップ</div>
             <div id="choices-area" class="choices-container"></div>
         </div>
 
         <!-- 最終決戦 -->
-        <div id="battle-ui" onclick="skipTypewriter()">
+        <div id="battle-ui">
             <div class="dungeon-status">【 深淵の影との対峙 】</div>
             <div id="battle-text" class="story-text battle-text-area"></div>
             <div id="battle-choices" class="choices-container"></div>
@@ -630,35 +629,28 @@ function triggerEvent(type) {
         if (type === 2) {
             titleEl.innerText = `【 記憶の残滓 [ ${crystals + 1} / 3 ] 】`;
             let data = currentCrystalPool[crystals];
-            typeWriter(storyEl, data.story, 30, () => {
-                renderChoices(data.choices, 2);
-                decisionStartTime = Date.now();
-            });
+            storyEl.innerText = data.story;
+            renderChoices(data.choices, 2);
         } else if (type === 3) {
             titleEl.innerText = "【 彷徨える影 】";
-            typeWriter(storyEl, currentNPCEvent.story, 30, () => {
-                renderChoices(currentNPCEvent.choices, 3);
-                decisionStartTime = Date.now();
-            });
+            storyEl.innerText = currentNPCEvent.story;
+            renderChoices(currentNPCEvent.choices, 3);
         } else if (type === 4) {
             titleEl.innerText = "【 封印された遺物 】";
-            typeWriter(storyEl, currentChestEvent.story, 30, () => {
-                renderChoices(currentChestEvent.choices, 4);
-                decisionStartTime = Date.now();
-            });
+            storyEl.innerText = currentChestEvent.story;
+            renderChoices(currentChestEvent.choices, 4);
         } else if (type === 5) {
             if (crystals < 3) {
                 titleEl.innerText = "【 閉ざされた扉 】";
-                const doorText = `冷たく重い鉄の扉が、あなたの行く手を拒絶している。\n失われた記憶の結晶がまだ足りないようだ。\n（現在の結晶: ${crystals} / 3個）`;
-                typeWriter(storyEl, doorText, 30, () => {
-                    let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = "引き返す";
-                    btn.onclick = () => { dir = (dir + 2) % 4; px += dx[dir]; py += dy[dir]; playSound('step'); transitionTo('dungeon-ui', drawView); };
-                    choicesEl.appendChild(btn);
-                });
+                storyEl.innerText = `冷たく重い鉄の扉が、あなたの行く手を拒絶している。\n失われた記憶の結晶がまだ足りないようだ。\n（現在の結晶: ${crystals} / 3個）`;
+                let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = "引き返す";
+                btn.onclick = () => { dir = (dir + 2) % 4; px += dx[dir]; py += dy[dir]; playSound('step'); transitionTo('dungeon-ui', drawView); };
+                choicesEl.appendChild(btn);
             } else {
                 startFinalBattle();
             }
         }
+        decisionStartTime = Date.now();
     });
 }
 
@@ -776,20 +768,17 @@ function startFinalBattle() {
         let avgTime = decisionTimes.length > 0 ? (decisionTimes.reduce((a,b)=>a+b, 0) / decisionTimes.length) : 20000;
         let avgSec = (avgTime / 1000).toFixed(1);
 
-        if (avgTime < 12000) { 
-            currentTimeTrait = "直感と電光石火の速さ（12秒未満）"; currentTimeGroup = "fast"; 
-        } else if (avgTime > 28000) { 
-            currentTimeTrait = "深き熟考と慎重なる歩み（28秒以上）"; currentTimeGroup = "slow"; 
-        } else { 
-            currentTimeTrait = "20秒前後の柔軟なる間合いと立ち回り"; currentTimeGroup = "mid"; 
+        if (avgTime < 12000) {
+            currentTimeTrait = "直感と電光石火の速さ"; currentTimeGroup = "fast";
+        } else if (avgTime > 28000) {
+            currentTimeTrait = "深き熟考と慎重なる歩み"; currentTimeGroup = "slow";
+        } else {
+            currentTimeTrait = "柔軟なる間合いと立ち回り"; currentTimeGroup = "mid";
         }
 
-        const battleHtml = `鉄の扉を抜けた先。巨大な空間の底で、重厚な足音が響く。\nあなたが無意識の底に切り捨てた影、【<span class="battle-highlight">${data.shadowName}</span>】の具現が立ち塞がった。\n\n【魂の軌跡】\n迷宮でのあなたの決断平均時間は ${avgSec}秒。\nその『<span class="battle-highlight">${currentTimeTrait}</span>』が、あなたの自我（エゴ）の核となっている。\n\nさあ、名もなき彷徨い人よ。\nこの絶望の影に対して、どう立ち向かう。`;
-        const battlePlain = battleHtml.replace(/<[^>]*>/g, '');
+        const battleHtml = `鉄の扉を抜けた先。巨大な空間の底で、重厚な足音が響く。\nあなたが無意識の底に切り捨てた影、【<span class="battle-highlight">${data.shadowName}</span>】の具現が立ち塞がった。\n\n【魂の軌跡】\nその『<span class="battle-highlight">${currentTimeTrait}</span>』が、あなたの自我（エゴ）の核となっている。\n\nさあ、名もなき彷徨い人よ。\nこの絶望の影に対して、どう立ち向かう。`;
 
-        const battleEl = document.getElementById('battle-text');
-        const bChoicesEl = document.getElementById('battle-choices');
-        bChoicesEl.innerHTML = '';
+        document.getElementById('battle-text').innerHTML = battleHtml;
 
         const battleChoices = [
             { text: "武器を構え、影の主を力と意志でねじ伏せる", group: "fast" },
@@ -798,13 +787,12 @@ function startFinalBattle() {
             { text: "影の力を利用し、自らの魔術の糧として吸収する", group: "mid" }
         ];
 
-        typeWriter(battleEl, battlePlain, 22, () => {
-            battleEl.innerHTML = battleHtml;
-            battleChoices.forEach(c => {
-                let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = c.text;
-                btn.onclick = () => resolveFinalBattle(c.group);
-                bChoicesEl.appendChild(btn);
-            });
+        const bChoicesEl = document.getElementById('battle-choices');
+        bChoicesEl.innerHTML = '';
+        battleChoices.forEach(c => {
+            let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = c.text;
+            btn.onclick = () => resolveFinalBattle(c.group);
+            bChoicesEl.appendChild(btn);
         });
     });
 }
