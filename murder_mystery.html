@@ -774,10 +774,10 @@
 
         try {
             updateLoading('シナリオを生成中...', 'AIが事件の真相を構築しています');
-            scenario = await generateScenario();
+            scenario = await withTimeout(generateScenario(), 60000, 'シナリオ生成');
 
             updateLoading('容疑者の証言を生成中...', '7人分のキャラクター設定中');
-            await generateAllStatements();
+            await withTimeout(generateAllStatements(), 120000, '証言生成');
 
             document.getElementById('loadingPanel').style.display = 'none';
             document.getElementById('storyPanel').style.display = 'block';
@@ -829,9 +829,9 @@
 
     // 試すモデルのリスト（順番に試す）
     const GEMINI_MODELS = [
+        'gemini-2.0-flash',
         'gemini-1.5-pro',
         'gemini-1.0-pro',
-        'gemini-pro',
     ];
 
     async function callGemini(prompt) {
@@ -859,12 +859,33 @@
                     continue;
                 }
                 const data = await response.json();
-                return data.candidates[0].content.parts[0].text;
+                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!text) throw new Error('APIが空のレスポンスを返しました');
+                return text;
             } catch (e) {
                 lastError = e;
             }
         }
         throw lastError || new Error('利用可能なモデルが見つかりませんでした');
+    }
+
+    function parseJsonFromText(text, label) {
+        const match = text.match(/\{[\s\S]*\}/);
+        if (!match) throw new Error(`${label}: JSONが見つかりませんでした`);
+        try {
+            return JSON.parse(match[0]);
+        } catch (e) {
+            throw new Error(`${label}: JSONの解析に失敗しました — ${e.message}`);
+        }
+    }
+
+    function withTimeout(promise, ms, label) {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error(`${label}がタイムアウトしました (${ms / 1000}秒)`)), ms)
+            )
+        ]);
     }
 
     async function generateScenario() {
@@ -922,9 +943,7 @@ JSON形式のみで返答(マークダウン・コードブロック不要):
 }`;
 
         const text = await callGemini(prompt);
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('シナリオの解析に失敗しました');
-        return JSON.parse(jsonMatch[0]);
+        return parseJsonFromText(text, 'シナリオ');
     }
 
     async function generateAllStatements() {
@@ -969,9 +988,7 @@ ${scenario.keyWitness}
 }`;
 
             const text = await callGemini(prompt);
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) throw new Error(`${info.name}の証言生成に失敗`);
-            scenario.suspects[info.id].statements = JSON.parse(jsonMatch[0]);
+            scenario.suspects[info.id].statements = parseJsonFromText(text, `${info.name}の証言`);
         });
 
         await Promise.all(promises);
@@ -990,7 +1007,7 @@ ${scenario.keyWitness}
 
     function renderSuspects() {
         document.getElementById('suspectGrid').innerHTML = suspectInfo.map(s => `
-            <div class="suspect-card" onclick="selectSuspect('${s.id}')">
+            <div class="suspect-card" onclick="selectSuspect('${s.id}', event)">
                 <div class="suspect-card-name">${s.name}</div>
                 <div class="suspect-card-role">${s.role}</div>
             </div>
@@ -1014,11 +1031,11 @@ ${scenario.keyWitness}
 
     // ── インタラクション ──
 
-    function selectSuspect(id) {
+    function selectSuspect(id, event) {
         currentSuspectId = id;
         const s = suspectInfo.find(x => x.id === id);
         document.querySelectorAll('.suspect-card').forEach(c => c.classList.remove('active'));
-        event.target.closest('.suspect-card').classList.add('active');
+        event.currentTarget.classList.add('active');
 
         document.getElementById('currentSuspect').innerHTML = `
             <div class="suspect-header-name">${s.name}</div>
@@ -1099,6 +1116,11 @@ ${scenario.keyWitness}
 
     // ── 音声合成 ──
 
+    let currentUtterance = null;
+
+    function showSpeaking() { document.getElementById('speakingIndicator').classList.add('active'); }
+    function hideSpeaking() { document.getElementById('speakingIndicator').classList.remove('active'); }
+
     function speakAsSuspect(text, suspectId) {
         if (window.speechSynthesis.speaking) {
             window.speechSynthesis.cancel();
@@ -1116,6 +1138,7 @@ ${scenario.keyWitness}
 
         const config = voiceConfigs[suspectId] || { pitch: 1.0, rate: 1.0 };
         const utterance = new SpeechSynthesisUtterance(text);
+        currentUtterance = utterance;
         utterance.lang = 'ja-JP';
         utterance.pitch = config.pitch;
         utterance.rate = config.rate;
@@ -1124,9 +1147,9 @@ ${scenario.keyWitness}
         const jaVoice = voices.find(v => v.lang.startsWith('ja'));
         if (jaVoice) utterance.voice = jaVoice;
 
-        utterance.onstart = () => document.getElementById('speakingIndicator').classList.add('active');
-        utterance.onend   = () => document.getElementById('speakingIndicator').classList.remove('active');
-        utterance.onerror = () => document.getElementById('speakingIndicator').classList.remove('active');
+        utterance.onstart = () => { if (currentUtterance === utterance) showSpeaking(); };
+        utterance.onend   = () => { if (currentUtterance === utterance) hideSpeaking(); };
+        utterance.onerror = () => { if (currentUtterance === utterance) hideSpeaking(); };
 
         window.speechSynthesis.speak(utterance);
     }
