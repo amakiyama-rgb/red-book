@@ -543,9 +543,9 @@ function playSound(type) {
         osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.4);
         gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
     } else if (type === 'battle') {
-        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, audioCtx.currentTime);
-        osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 1.5);
-        gain.gain.setValueAtTime(0.5, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 2.0);
+        osc.type = 'sine'; osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(50, audioCtx.currentTime + 1.5);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 2.0);
     }
     osc.connect(gain); gain.connect(audioCtx.destination); osc.start();
     osc.stop(audioCtx.currentTime + 2.5);
@@ -567,21 +567,21 @@ function stopBgm(fadeTime = 0.6) {
 const FLOOR_BGM_CFG = [
     {
         arpNotes: [523.25, 659.25, 783.99, 880.00, 783.99, 659.25, 523.25, 587.33],
-        arpTempo: 260, arpType: 'triangle', arpGain: 0.072,
-        droneFreq: 130.81, droneType: 'sine', droneGain: 0.038, lfoRate: 2.4,
-        padFreqs: [[261.63, 0.032], [329.63, 0.026], [392.00, 0.022]]
+        arpTempo: 280, arpType: 'sine', arpGain: 0.048,
+        droneFreq: 130.81, droneType: 'sine', droneGain: 0.022, lfoRate: 2.2,
+        padFreqs: [[261.63, 0.018], [329.63, 0.014], [392.00, 0.012]]
     },
     {
         arpNotes: [440.00, 523.25, 587.33, 659.25, 587.33, 523.25, 466.16, 440.00],
-        arpTempo: 400, arpType: 'square', arpGain: 0.048,
-        droneFreq: 55.00, droneType: 'sawtooth', droneGain: 0.052, lfoRate: 1.4,
-        padFreqs: [[110.00, 0.038], [164.81, 0.028]]
+        arpTempo: 420, arpType: 'triangle', arpGain: 0.036,
+        droneFreq: 110.00, droneType: 'sine', droneGain: 0.026, lfoRate: 1.2,
+        padFreqs: [[110.00, 0.018], [164.81, 0.014]]
     },
     {
         arpNotes: [293.66, 311.13, 349.23, 440.00, 523.25, 440.00, 349.23, 311.13],
-        arpTempo: 540, arpType: 'sawtooth', arpGain: 0.058,
-        droneFreq: 73.42, droneType: 'sawtooth', droneGain: 0.065, lfoRate: 0.75,
-        padFreqs: [[73.42, 0.048], [110.00, 0.032], [146.83, 0.026]]
+        arpTempo: 560, arpType: 'triangle', arpGain: 0.038,
+        droneFreq: 73.42, droneType: 'sine', droneGain: 0.032, lfoRate: 0.65,
+        padFreqs: [[73.42, 0.022], [110.00, 0.016], [146.83, 0.013]]
     }
 ];
 
@@ -650,22 +650,22 @@ function startBattleBgm() {
 
     const drone = audioCtx.createOscillator();
     const droneG = audioCtx.createGain();
-    drone.type = 'sawtooth'; drone.frequency.value = 55;
-    droneG.gain.value = 0.08;
+    drone.type = 'sine'; drone.frequency.value = 55;
+    droneG.gain.value = 0.04;
     drone.connect(droneG); droneG.connect(master);
     drone.start(); bgmOscs.push(drone); bgmGains.push(droneG);
 
     const lfo = audioCtx.createOscillator();
     const lfoG = audioCtx.createGain();
     lfo.type = 'sine'; lfo.frequency.value = 1.8;
-    lfoG.gain.value = 0.028;
+    lfoG.gain.value = 0.014;
     lfo.connect(lfoG); lfoG.connect(droneG.gain);
     lfo.start(); bgmOscs.push(lfo);
 
     const fifth = audioCtx.createOscillator();
     const fifthG = audioCtx.createGain();
-    fifth.type = 'sawtooth'; fifth.frequency.value = 82.41;
-    fifthG.gain.value = 0.045;
+    fifth.type = 'sine'; fifth.frequency.value = 82.41;
+    fifthG.gain.value = 0.022;
     fifth.connect(fifthG); fifthG.connect(master);
     fifth.start(); bgmOscs.push(fifth); bgmGains.push(fifthG);
 
@@ -678,7 +678,7 @@ function scheduleBattleArp(dest) {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'triangle'; osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.065, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.038, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.65);
     osc.connect(gain); gain.connect(dest);
     osc.start(); osc.stop(audioCtx.currentTime + 0.7);
