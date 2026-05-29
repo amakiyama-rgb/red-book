@@ -6,16 +6,33 @@
     <title>深層迷宮：赤の書 // FOREST OF SHADOWS</title>
     <style>
         :root {
-            /* 淀んだ深い森のテーマ */
             --bg-color: #080a08;
             --panel-color: #121411;
-            --accent-color: #c5a963; 
-            --wire-green: #4a5e3d;   
-            --accent-red: #a83232;   
+            --accent-color: #c5a963;
+            --wire-green: #4a5e3d;
+            --accent-red: #a83232;
             --text-color: #d1d0c5;
             --text-muted: #75746a;
             --border-color: #272b25;
             --shadow-color: rgba(74, 94, 61, 0.15);
+        }
+
+        /* 第二層：闇の回廊テーマ */
+        body.floor-1 {
+            --bg-color: #08080f;
+            --panel-color: #0e0e1a;
+            --wire-green: #4a4a8a;
+            --border-color: #252535;
+            --shadow-color: rgba(74, 74, 138, 0.2);
+        }
+
+        /* 第三層：赤の書テーマ */
+        body.floor-2 {
+            --bg-color: #0f0808;
+            --panel-color: #1a0e0e;
+            --wire-green: #8a2020;
+            --border-color: #352020;
+            --shadow-color: rgba(138, 32, 32, 0.25);
         }
 
         /* 勝利時（自己の統合） */
@@ -48,12 +65,21 @@
             width: 100%;
             max-width: 550px;
             background-color: var(--panel-color);
+            background-image: repeating-linear-gradient(
+                0deg, transparent, transparent 3px, rgba(0,0,0,0.05) 3px, rgba(0,0,0,0.05) 4px
+            );
             padding: 25px 25px 35px 25px;
             border-radius: 4px;
             box-shadow: 0 0 40px var(--shadow-color);
             border: 1px solid var(--border-color);
             transition: all 2s ease;
             position: relative;
+        }
+        .game-container::before {
+            content: '';
+            position: absolute; top: 0; left: 12%; right: 12%;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--wire-green), transparent);
         }
 
         .btn-mute {
@@ -74,13 +100,18 @@
 
         h1 {
             font-size: 1.35rem;
-            text-align: center;
             color: var(--wire-green);
             margin-top: 5px;
             letter-spacing: 4px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 15px;
+            display: flex; align-items: center; gap: 10px;
         }
+        h1::before, h1::after {
+            content: ''; flex: 1; height: 1px;
+        }
+        h1::before { background: linear-gradient(to right, transparent, var(--wire-green)); }
+        h1::after  { background: linear-gradient(to left,  transparent, var(--wire-green)); }
 
         .dungeon-status {
             font-size: 0.95rem;
@@ -117,54 +148,80 @@
             text-align: left;
             font-size: 0.95rem;
             line-height: 1.5;
-            transition: all 0.2s ease;
+            transition: background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
             font-family: inherit;
+            position: relative; overflow: hidden;
         }
-
+        .btn-choice::after {
+            content: '';
+            position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+            background: var(--accent-color);
+            transform: scaleY(0);
+            transition: transform 0.15s ease;
+            transform-origin: bottom;
+        }
+        .btn-choice:hover::after, .btn-choice:focus::after { transform: scaleY(1); }
         .btn-choice:hover, .btn-choice:focus {
-            background-color: #1a1f17;
+            background: linear-gradient(to right, rgba(74,94,61,0.2) 0%, #1a1f17 55%);
             color: var(--accent-color);
             border-color: var(--wire-green);
             transform: translateY(-1px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.7), -2px 0 0 var(--accent-color);
             outline: none;
         }
 
-        .view-wrapper { transition: opacity 0.5s ease; opacity: 1; }
+        .view-wrapper { transition: opacity 0.18s ease; opacity: 1; }
         .view-wrapper.fade-out { opacity: 0; pointer-events: none; }
 
         #prologue-ui, #story-ui, #result-ui, #battle-ui { display: none; }
-        
+
         #dungeon-ui {
             display: none; flex-direction: column; align-items: center; width: 100%;
         }
 
         .canvas-container { position: relative; margin-bottom: 25px; width: 100%; max-width: 320px; }
-        
+
         canvas#view3d {
             background-color: #000; border: 2px solid var(--wire-green);
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.8); image-rendering: pixelated;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8), 0 0 18px rgba(74,94,61,0.25);
+            image-rendering: pixelated;
             width: 100%; height: auto; display: block; border-radius: 4px;
         }
-        
+
         canvas#minimap {
             position: absolute; top: 10px; right: 10px;
             border: 1px solid var(--wire-green); background: rgba(0, 0, 0, 0.85);
             width: 88px; height: 88px; border-radius: 4px;
         }
-        
+
         .controls { display: flex; gap: 10px; width: 100%; max-width: 320px; justify-content: space-between; }
-        
+
         .btn-move {
             background: #0b0c0a; color: var(--text-muted); border: 1px solid var(--border-color);
-            padding: 15px 5px; font-size: 1rem; cursor: pointer; border-radius: 4px; font-weight: bold;
-            flex: 1; transition: all 0.1s; text-align: center;
+            padding: 15px 5px; font-size: 1.1rem; cursor: pointer; border-radius: 4px; font-weight: bold;
+            flex: 1; transition: all 0.1s; text-align: center; letter-spacing: 1px;
         }
+        .btn-move:hover { background: rgba(74,94,61,0.15); color: var(--accent-color); border-color: var(--wire-green); }
         .btn-move:active { background: var(--wire-green); color: #fff; transform: scale(0.95); }
 
-        .result-title { font-size: 1.8rem; text-align: center; letter-spacing: 4px; margin: 25px 0; font-weight: bold; }
-        .victory-title { color: var(--accent-color); text-shadow: 0 0 10px rgba(197, 169, 99, 0.5); } 
-        .defeat-title { color: var(--accent-red); text-shadow: 0 0 10px rgba(168, 50, 50, 0.5); }  
+        .result-title {
+            font-size: 1.4rem;
+            text-align: center;
+            letter-spacing: 2px;
+            margin: 22px 0;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+        .victory-title { color: var(--accent-color); animation: victory-glow 2.5s ease-in-out infinite; }
+        .defeat-title  { color: var(--accent-red);   animation: defeat-glow  2.5s ease-in-out infinite; }
+        @keyframes victory-glow {
+            0%,100% { text-shadow: 0 0 10px rgba(229,201,115,0.4); }
+            50%      { text-shadow: 0 0 26px rgba(229,201,115,0.95), 0 0 55px rgba(229,201,115,0.25); }
+        }
+        @keyframes defeat-glow {
+            0%,100% { text-shadow: 0 0 10px rgba(168,50,50,0.4); }
+            50%      { text-shadow: 0 0 26px rgba(168,50,50,0.95), 0 0 55px rgba(168,50,50,0.25); }
+        }
 
         .result-section {
             background: rgba(0,0,0,0.4); padding: 20px; border-radius: 4px;
@@ -177,8 +234,15 @@
 
         .quote-section {
             text-align: center; font-style: italic; color: var(--accent-color);
-            padding: 25px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
-            margin: 30px 0; font-size: 1rem; line-height: 1.8;
+            padding: 28px 45px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+            margin: 30px 0; font-size: 1rem; line-height: 1.9;
+            position: relative;
+        }
+        .quote-section::before {
+            content: '❝';
+            position: absolute; top: 8px; left: 14px;
+            font-size: 3rem; color: var(--wire-green); opacity: 0.18;
+            line-height: 1; font-family: serif; font-style: normal;
         }
 
         #audio-overlay {
@@ -190,20 +254,147 @@
             background: transparent; color: var(--wire-green); border: 1px solid var(--wire-green);
             padding: 15px 30px; font-size: 1.1rem; cursor: pointer; font-family: inherit; letter-spacing: 2px;
             border-radius: 4px; transition: all 0.3s;
+            position: relative; overflow: hidden;
+        }
+        .btn-start::after {
+            content: '';
+            position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+            background: var(--wire-green);
+            transform: scaleX(0); transition: transform 0.25s ease;
         }
         .btn-start:hover { background: var(--wire-green); color: #fff; box-shadow: 0 0 15px rgba(74, 94, 61, 0.4); }
-        
+        .btn-start:hover::after { transform: scaleX(1); }
+
         #game-top { position: absolute; top: -20px; left: 0; }
-        
+
         .battle-text-area {
             background: rgba(168, 50, 50, 0.1);
             border-left: 4px solid var(--accent-red);
-            padding: 15px;
+            padding: 18px 18px 18px 20px;
             border-radius: 0 4px 4px 0;
-            color: #e8e6d9; 
+            color: #e8e6d9;
             margin-bottom: 25px;
+            animation: battle-pulse 2.8s ease-in-out infinite;
+        }
+        @keyframes battle-pulse {
+            0%,100% { border-left-color: var(--accent-red); box-shadow: none; }
+            50%      { border-left-color: #d95050; box-shadow: -3px 0 10px rgba(168,50,50,0.35); }
         }
         .battle-highlight { color: #ffb3b3; font-weight: bold; }
+
+        .skip-hint {
+            text-align: center; font-size: 0.75rem; color: var(--text-muted);
+            margin-top: -15px; margin-bottom: 15px; letter-spacing: 1px;
+            opacity: 0; transition: opacity 0.4s; pointer-events: none;
+        }
+        .skip-hint.visible { opacity: 1; }
+        .typing-cursor::after { content: '▎'; color: var(--accent-color); animation: cur-blink 0.7s step-end infinite; }
+        @keyframes cur-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        .radar-section { border-left: 3px solid var(--wire-green); }
+        .radar-section h3 { color: var(--wire-green); }
+
+        #event-title {
+            background: rgba(74,94,61,0.09);
+            border-left: 3px solid var(--wire-green);
+            text-align: left; padding: 10px 15px;
+            border-radius: 0 4px 4px 0;
+            margin-bottom: 22px;
+        }
+
+        .result-section h3 {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .result-section h3::after {
+            content: ''; flex: 1; height: 1px;
+            background: var(--border-color);
+        }
+
+        .prologue-guide {
+            background: rgba(74,94,61,0.06);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--wire-green);
+            padding: 15px 18px;
+            margin: 0 0 25px 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.88rem;
+            line-height: 2.0;
+            color: var(--text-muted);
+        }
+        .prologue-guide p { margin: 4px 0; }
+        .guide-rule {
+            color: var(--wire-green); letter-spacing: 3px;
+            font-size: 0.82rem; margin-bottom: 10px;
+        }
+
+        .resonance-section { border-left: 3px solid var(--accent-color); }
+
+        .subtype-list { display: grid; gap: 10px; }
+
+        .subtype-item {
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            line-height: 1.6;
+        }
+        .subtype-item strong { color: var(--accent-color); }
+
+        .battle-round-bar {
+            display: flex; gap: 8px; justify-content: center;
+            margin-bottom: 16px;
+        }
+        .round-pip {
+            width: 28px; height: 6px; border-radius: 3px;
+            background: var(--border-color); transition: background 0.4s;
+        }
+        .round-pip.win  { background: var(--accent-color); }
+        .round-pip.lose { background: var(--accent-red); }
+        .round-pip.active { background: var(--wire-green); animation: pip-pulse 1s ease-in-out infinite; }
+        @keyframes pip-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        .enemy-badge {
+            display: inline-block; color: #cc3333;
+            font-size: 0.8rem; letter-spacing: 1px; margin-bottom: 8px;
+        }
+
+        @media (max-width: 640px) {
+            body { padding: 12px; align-items: flex-start; min-height: 100dvh; }
+            .game-container { max-width: 100%; padding: 18px 14px 24px 14px; box-sizing: border-box; }
+            h1 { font-size: 1.05rem; letter-spacing: 1.8px; gap: 6px; padding-bottom: 12px; margin-top: 38px; }
+            .dungeon-status { font-size: 0.82rem; letter-spacing: 1px; line-height: 1.7; margin-bottom: 14px; }
+            .story-text { font-size: 0.96rem; line-height: 1.9; margin-bottom: 24px; min-height: 96px; }
+            .btn-choice, .btn-start, .btn-move { min-height: 52px; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+            .btn-choice { font-size: 0.93rem; padding: 14px 14px 14px 16px; }
+            .btn-start { width: 100%; box-sizing: border-box; padding: 14px 18px; font-size: 1rem; }
+            .canvas-container { max-width: 100%; margin-bottom: 16px; }
+            canvas#view3d { width: 100%; max-width: 100%; }
+            canvas#minimap { width: 72px; height: 72px; top: 8px; right: 8px; }
+            .controls {
+                gap: 8px; max-width: 100%;
+                position: sticky; bottom: 8px;
+                background: linear-gradient(to top, rgba(18,20,17,0.98), rgba(18,20,17,0.82));
+                padding: 8px; border: 1px solid var(--border-color); border-radius: 8px;
+                backdrop-filter: blur(4px);
+            }
+            .btn-move { font-size: 1rem; padding: 14px 4px; }
+            .result-title { font-size: 1.1rem; letter-spacing: 1px; margin: 16px 0; }
+            .result-section, .quote-section, .prologue-guide, .battle-text-area { padding: 14px; }
+            .quote-section { margin: 20px 0; font-size: 0.92rem; line-height: 1.8; }
+            .quote-section::before { left: 8px; top: 6px; font-size: 2.4rem; }
+            #audio-overlay { padding: 18px; box-sizing: border-box; text-align: center; }
+        }
+
+        @media (max-width: 400px) {
+            body { padding: 8px; }
+            .game-container { padding: 16px 10px 20px 10px; }
+            h1 { font-size: 0.96rem; letter-spacing: 1px; }
+            .controls { gap: 6px; padding: 6px; }
+            .btn-move { font-size: 0.94rem; }
+            .story-text { font-size: 0.92rem; }
+            .dungeon-status { font-size: 0.76rem; }
+            .result-title { font-size: 1rem; }
+        }
     </style>
 </head>
 <body>
@@ -230,14 +421,20 @@
                 失われた本当の自己を取り戻すため、この薄暗い書架の迷宮を歩き、「記憶の結晶」を集めよ。
                 だが警戒しろ。淀んだ暗がりには、あなたがかつて切り捨て、押し殺した『己の影』が蠢いている。
             </div>
+            <div class="prologue-guide">
+                <div class="guide-rule">〈 迷宮の掟 〉</div>
+                <p>書架迷宮は <strong>第一層 / 第二層 / 第三層</strong> の三層構造となった。各層で「記憶の結晶」をひとつずつ回収し、階下へ降りよ。</p>
+                <p>各層では「記憶」「影」「遺物」「彷徨う敵」の四つの問いが汝を測る。選んだ答えは12の原型へ刻まれ、最後の診断結果へ直結する。</p>
+                <p>ラスボスとの決戦は<strong>三幕制</strong>。二勝以上で魂の統合が完成する。</p>
+            </div>
             <div style="text-align: center; margin-top: 20px;">
-                <button class="btn-start" onclick="transitionTo('dungeon-ui', drawView)">図書館の扉を開く</button>
+                <button class="btn-start" onclick="startGame()">図書館の扉を開く</button>
             </div>
         </div>
 
         <!-- 3Dダンジョン -->
         <div id="dungeon-ui">
-            <div class="dungeon-status" id="dungeon-status">記憶の結晶 [ 0 / 3 ]</div>
+            <div class="dungeon-status" id="dungeon-status">第一層 | 記憶の結晶 ◇◇◇ | 層の残響：未踏破</div>
             <div class="canvas-container">
                 <canvas id="view3d" width="320" height="320"></canvas>
                 <canvas id="minimap" width="88" height="88"></canvas>
@@ -258,7 +455,12 @@
 
         <!-- 最終決戦 -->
         <div id="battle-ui">
-            <div class="dungeon-status">【 深淵の影との対峙 】</div>
+            <div class="dungeon-status" id="battle-status">【 深淵の影との対峙 】</div>
+            <div class="battle-round-bar" id="round-bar">
+                <div class="round-pip active" id="pip-0"></div>
+                <div class="round-pip" id="pip-1"></div>
+                <div class="round-pip" id="pip-2"></div>
+            </div>
             <div id="battle-text" class="story-text battle-text-area"></div>
             <div id="battle-choices" class="choices-container"></div>
         </div>
@@ -268,15 +470,25 @@
             <div class="dungeon-status">個体化の完了</div>
             <div id="res-title" class="result-title"></div>
             <div id="res-narrative" class="story-text" style="font-size:0.95rem; margin-bottom:20px; color: var(--accent-color);"></div>
-            
+
             <div class="result-section">
                 <h3>メイン・アーキタイプ（原型）</h3>
                 <div id="res-desc"></div>
             </div>
-            
+
             <div class="result-section shadow-section">
                 <h3>シャドウ（影の側面）</h3>
                 <div id="res-shadow"></div>
+            </div>
+
+            <div class="result-section resonance-section">
+                <h3>副次アーキタイプ（上位2傾向）</h3>
+                <div id="res-subtypes" class="subtype-list"></div>
+            </div>
+
+            <div class="result-section radar-section">
+                <h3>魂の形状（12原型分布）</h3>
+                <canvas id="radar-chart" width="260" height="260" style="display:block; margin: 5px auto;"></canvas>
             </div>
 
             <div id="res-quote" class="quote-section"></div>
@@ -289,11 +501,12 @@
 </div>
 
 <script>
-// --- 音響システム ---
+// ─────────────────────────────────────────────
+// 音響システム
+// ─────────────────────────────────────────────
 let audioCtx = null;
 let isMuted = false;
-let ambientOsc = null;
-let ambientGain = null;
+let bgmOscs = [], bgmGains = [], bgmTimer = null, bgmArpIdx = 0;
 
 function toggleMute() {
     isMuted = !isMuted;
@@ -310,10 +523,6 @@ function initAudio() {
         const Ctx = window.AudioContext || window.webkitAudioContext;
         if (!Ctx) return;
         audioCtx = new Ctx();
-        ambientOsc = audioCtx.createOscillator();
-        ambientGain = audioCtx.createGain();
-        ambientOsc.type = 'sawtooth'; ambientOsc.frequency.value = 40; ambientGain.gain.value = 0.05;
-        ambientOsc.connect(ambientGain); ambientGain.connect(audioCtx.destination); ambientOsc.start();
         if (isMuted) audioCtx.suspend();
     } catch(e) { console.warn('Audio failed:', e); audioCtx = null; }
 }
@@ -324,66 +533,448 @@ function playSound(type) {
     if (type === 'step') {
         osc.type = 'square'; osc.frequency.setValueAtTime(80, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.18, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
     } else if (type === 'event') {
-        osc.type = 'sine'; osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-        osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.6);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+        osc.type = 'sine'; osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(330, audioCtx.currentTime + 0.5);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+    } else if (type === 'enemy') {
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
     } else if (type === 'battle') {
-        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, audioCtx.currentTime);
-        osc.frequency.linearRampToValueAtTime(30, audioCtx.currentTime + 2.0);
-        gain.gain.setValueAtTime(0.6, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 2.5);
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 1.5);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 2.0);
     }
     osc.connect(gain); gain.connect(audioCtx.destination); osc.start();
     osc.stop(audioCtx.currentTime + 2.5);
 }
 
-function transitionTo(targetId, callback) {
-    const wrapper = document.getElementById('main-wrapper');
-    wrapper.classList.add('fade-out'); 
-    
-    setTimeout(() => {
-        ['prologue-ui', 'dungeon-ui', 'story-ui', 'battle-ui', 'result-ui'].forEach(id => {
-            document.getElementById(id).style.display = 'none';
-        });
-        
-        const targetEl = document.getElementById(targetId);
-        targetEl.style.display = (targetId === 'dungeon-ui') ? 'flex' : 'block';
-        
-        if (callback) callback();
-        
-        document.getElementById('game-top').scrollIntoView({ behavior: 'auto' });
-        wrapper.classList.remove('fade-out');
-    }, 500); 
+function stopBgm(fadeTime = 0.6) {
+    if (bgmTimer) { clearTimeout(bgmTimer); bgmTimer = null; }
+    if (!audioCtx) { bgmOscs = []; bgmGains = []; bgmArpIdx = 0; return; }
+    const stopAt = audioCtx.currentTime + fadeTime;
+    bgmGains.forEach(g => { try { g.gain.linearRampToValueAtTime(0, stopAt); } catch(e) {} });
+    bgmOscs.forEach(o => { try { o.stop(stopAt + 0.05); } catch(e) {} });
+    bgmOscs = []; bgmGains = []; bgmArpIdx = 0;
 }
 
-// --- ランダムイベントプール ---
-const crystalPoolMaster = [
-    { story: "腐敗した書架の奥、石の祭壇に古い本が開かれている。\nそこには、あなたが目を背けてきた己の罪と醜悪な欲望が克明に記されている。\n『己の影を知れ』と、古い血のインクが浮かび上がった。", choices: [ { text: "冷静に記述を読み解き、己の深層の法則を学ぶ", type: "sage" }, { text: "「こんなものは私ではない」と本を叩き落とし、目を塞ぐ", type: "innocent" }, { text: "忌まわしき罪の記述に、なぜか甘美な魅力を感じる", type: "lover" }, { text: "祭壇ごと本を破壊し、過去の記録を力で隠滅する", type: "outlaw" }] },
-    { story: "知識の残骸が泥のように溶け出した沼に足を踏み入れた。\n底なしの泥が足を絡め取り、自我を溶かそうと精神を蝕んでいく。\n重苦しい腐敗の中で、あなたはどう抗うか。", choices: [ { text: "精神を侵されながらも、強靭な意志で沼を一直線に突破する", type: "hero" }, { text: "自我の摩耗を受け入れつつ、安全な足場を少しずつ探す", type: "everyman" }, { text: "沼の奥に隠された、未知の抜け道がないか探索する", type: "explorer" }, { text: "己の意識を集中させ、泥の浸食を中和する結界を張る", type: "magician" }] },
-    { story: "森の根に締め付けられた鉄の檻。中には、かつての「理想」の残骸が転がっている。\n暗闇から『お前もいずれこうなる』と低く嗤う声が響いた。", choices: [ { text: "残骸の構造を詳細にスケッチし、知識として記録する", type: "sage" }, { text: "嗤い声に向かって武器を構え、恐怖を怒りに変える", type: "outlaw" }, { text: "残骸を悼み、せめてもの慰めとして供物を捧げる", type: "lover" }, { text: "何も聞こえなかったふりをして、足早に檻を立ち去る", type: "innocent" }] },
-    { story: "泥の中から老賢者が姿を現し、燃え盛るランタンの火を差し出した。\n『森は自我を喰らう。火の痛みを引き受け、己を照らす光とせよ』と声がした。", choices: [ { text: "火の粉に怯え、安全な暗がりへと後ずさる", type: "everyman" }, { text: "痛みに耐え、素手で火を掴み己の魂の熱とする", type: "hero" }, { text: "残った火を利用して、自らの道具を打ち直す", type: "creator" }, { text: "火の温もりを、後に続く者への道標として守る", type: "caregiver" }] }
+// ─── 階層別BGM設定 ─────────────────────────────
+// 第一層：森の冒険（Cメジャーペンタトニック・明るい）
+// 第二層：闇の回廊（Aマイナー・緊張×冒険）
+// 第三層：赤の書（Dフリジアン・神秘×重厚）
+const FLOOR_BGM_CFG = [
+    {
+        arpNotes: [523.25, 659.25, 783.99, 880.00, 783.99, 659.25, 523.25, 587.33],
+        arpTempo: 260, arpType: 'triangle', arpGain: 0.072,
+        droneFreq: 130.81, droneType: 'sine', droneGain: 0.038, lfoRate: 2.4,
+        padFreqs: [[261.63, 0.032], [329.63, 0.026], [392.00, 0.022]]
+    },
+    {
+        arpNotes: [440.00, 523.25, 587.33, 659.25, 587.33, 523.25, 466.16, 440.00],
+        arpTempo: 400, arpType: 'square', arpGain: 0.048,
+        droneFreq: 55.00, droneType: 'sawtooth', droneGain: 0.052, lfoRate: 1.4,
+        padFreqs: [[110.00, 0.038], [164.81, 0.028]]
+    },
+    {
+        arpNotes: [293.66, 311.13, 349.23, 440.00, 523.25, 440.00, 349.23, 311.13],
+        arpTempo: 540, arpType: 'sawtooth', arpGain: 0.058,
+        droneFreq: 73.42, droneType: 'sawtooth', droneGain: 0.065, lfoRate: 0.75,
+        padFreqs: [[73.42, 0.048], [110.00, 0.032], [146.83, 0.026]]
+    }
 ];
 
-const npcPoolMaster = [
-    { story: "暗がりに、自我を失い狂気に沈んだ影がうずくまっている。\nその顔は、かつてのあなた自身に似ていた。\n『魂を…光をくれ…』と虚ろな声で呻いている。", choices: [ { text: "己の魂の力を分け与え、影の傷を癒す", type: "caregiver" }, { text: "「自力で立て」と厳しく突き放し、戦う意志を問う", type: "hero" }, { text: "影がなぜ狂気に沈んだのか、その原因を観察する", type: "sage" }, { text: "弱者に生きる価値はない。容赦なく斬り捨てる", type: "outlaw" }] },
-    { story: "狂気の茨に侵食された獣が、身動きが取れずに唸り声を上げている。\n暴れるたびに茨が肉を裂き、赤い滴が大地を濡らす。", choices: [ { text: "獣が落ち着くのを待ち、慎重に茨を解いてやる", type: "caregiver" }, { text: "刃を振り下ろし、茨ごと一刀両断して解放する", type: "hero" }, { text: "魔力を用いて、獣の肉体を傷つけずに茨だけを燃やす", type: "magician" }, { text: "関われば自分も傷つく。無視して通り過ぎる", type: "innocent" }] },
-    { story: "異端の姿をした者が、毒々しい色の雫が入った瓶を差し出してきた。\n『これを飲めば、深淵の真理が見えるだろう』", choices: [ { text: "破滅を恐れず、豪快に一息で飲み干す", type: "outlaw" }, { text: "怪しい誘いに乗るべきではない。丁重に断る", type: "everyman" }, { text: "雫の成分と魔力残滓を分析し、安全性を確かめる", type: "sage" }, { text: "雫の性質を書き換え、癒やしの薬に作り変える", type: "creator" }] }
+function startFloorBgm(floorIndex) {
+    if (!audioCtx) return;
+    stopBgm(0.7);
+    bgmArpIdx = 0;
+    const cfg = FLOOR_BGM_CFG[Math.min(floorIndex, 2)];
+
+    const master = audioCtx.createGain();
+    master.gain.setValueAtTime(0, audioCtx.currentTime);
+    master.gain.linearRampToValueAtTime(0.9, audioCtx.currentTime + 2.2);
+    master.connect(audioCtx.destination);
+    bgmGains.push(master);
+
+    const drone = audioCtx.createOscillator();
+    const droneG = audioCtx.createGain();
+    drone.type = cfg.droneType; drone.frequency.value = cfg.droneFreq;
+    droneG.gain.value = cfg.droneGain;
+    drone.connect(droneG); droneG.connect(master);
+    drone.start(); bgmOscs.push(drone); bgmGains.push(droneG);
+
+    const lfo = audioCtx.createOscillator();
+    const lfoG = audioCtx.createGain();
+    lfo.type = 'sine'; lfo.frequency.value = cfg.lfoRate;
+    lfoG.gain.value = cfg.droneGain * 0.28;
+    lfo.connect(lfoG); lfoG.connect(droneG.gain);
+    lfo.start(); bgmOscs.push(lfo);
+
+    cfg.padFreqs.forEach(([f, v]) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.value = f; g.gain.value = v;
+        osc.connect(g); g.connect(master);
+        osc.start(); bgmOscs.push(osc); bgmGains.push(g);
+    });
+
+    scheduleFloorArp(master, cfg);
+}
+
+function scheduleFloorArp(dest, cfg) {
+    if (!audioCtx || bgmOscs.length === 0) return;
+    const freq = cfg.arpNotes[bgmArpIdx % cfg.arpNotes.length];
+    bgmArpIdx++;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = cfg.arpType; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(cfg.arpGain, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + cfg.arpTempo / 1000 * 0.75);
+    osc.connect(gain); gain.connect(dest);
+    osc.start(); osc.stop(audioCtx.currentTime + cfg.arpTempo / 1000);
+    bgmTimer = setTimeout(() => scheduleFloorArp(dest, cfg), cfg.arpTempo);
+}
+
+// ラスボス専用BGM（Aマイナー重厚）
+const BATTLE_ARP = [110, 130.81, 164.81, 196, 220, 196, 164.81, 146.83];
+function startBattleBgm() {
+    if (!audioCtx) return;
+    stopBgm(0.4);
+    bgmArpIdx = 0;
+    const master = audioCtx.createGain();
+    master.gain.setValueAtTime(0, audioCtx.currentTime);
+    master.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 2.5);
+    master.connect(audioCtx.destination);
+    bgmGains.push(master);
+
+    const drone = audioCtx.createOscillator();
+    const droneG = audioCtx.createGain();
+    drone.type = 'sawtooth'; drone.frequency.value = 55;
+    droneG.gain.value = 0.08;
+    drone.connect(droneG); droneG.connect(master);
+    drone.start(); bgmOscs.push(drone); bgmGains.push(droneG);
+
+    const lfo = audioCtx.createOscillator();
+    const lfoG = audioCtx.createGain();
+    lfo.type = 'sine'; lfo.frequency.value = 1.8;
+    lfoG.gain.value = 0.028;
+    lfo.connect(lfoG); lfoG.connect(droneG.gain);
+    lfo.start(); bgmOscs.push(lfo);
+
+    const fifth = audioCtx.createOscillator();
+    const fifthG = audioCtx.createGain();
+    fifth.type = 'sawtooth'; fifth.frequency.value = 82.41;
+    fifthG.gain.value = 0.045;
+    fifth.connect(fifthG); fifthG.connect(master);
+    fifth.start(); bgmOscs.push(fifth); bgmGains.push(fifthG);
+
+    scheduleBattleArp(master);
+}
+function scheduleBattleArp(dest) {
+    if (!audioCtx || bgmOscs.length === 0) return;
+    const freq = BATTLE_ARP[bgmArpIdx % BATTLE_ARP.length];
+    bgmArpIdx++;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle'; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.065, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.65);
+    osc.connect(gain); gain.connect(dest);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.7);
+    bgmTimer = setTimeout(() => scheduleBattleArp(dest), 440);
+}
+
+// リザルト専用BGM
+const RESULT_MELODY = [392, 440, 493.88, 523.25, 587.33, 523.25, 493.88, 440];
+function startResultBgm() {
+    if (!audioCtx) return;
+    stopBgm(0.8);
+    bgmArpIdx = 0;
+    const master = audioCtx.createGain();
+    master.gain.setValueAtTime(0, audioCtx.currentTime);
+    master.gain.linearRampToValueAtTime(0.85, audioCtx.currentTime + 3);
+    master.connect(audioCtx.destination);
+    bgmGains.push(master);
+    [[130.81, 0.05], [164.81, 0.042], [196, 0.042], [261.63, 0.036]].forEach(([f, v]) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.value = f; g.gain.value = v;
+        osc.connect(g); g.connect(master);
+        osc.start(); bgmOscs.push(osc); bgmGains.push(g);
+    });
+    scheduleResultMelody(master);
+}
+function scheduleResultMelody(dest) {
+    if (!audioCtx || bgmOscs.length === 0) return;
+    const freq = RESULT_MELODY[bgmArpIdx % RESULT_MELODY.length];
+    bgmArpIdx++;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.062, audioCtx.currentTime + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.4);
+    osc.connect(gain); gain.connect(dest);
+    osc.start(); osc.stop(audioCtx.currentTime + 1.5);
+    bgmTimer = setTimeout(() => scheduleResultMelody(dest), 1050);
+}
+
+// ─────────────────────────────────────────────
+// 階層テーマ（CSS + Canvas）
+// ─────────────────────────────────────────────
+const FLOOR_THEMES = [
+    {
+        wall: '#4a5e3d', wallBg: '#080a08',
+        wallFills: ['#1c2418', '#141a10', '#0e120c', '#080a08'],
+        scanA: 'rgba(74,94,61,', scanB: 'rgba(197,169,99,',
+        miniWall: '#1a1d17', miniFloor: '#2d3826',
+        tileColors: { 2:'#9f2c2c', 3:'#705e3d', 4:'#3f4655', 5:'#d9534f', 6:'#688256', 7:'#6b3a1a' }
+    },
+    {
+        wall: '#4a4a8a', wallBg: '#08080f',
+        wallFills: ['#141427', '#0e0e1e', '#0a0a16', '#08080f'],
+        scanA: 'rgba(74,74,138,', scanB: 'rgba(120,100,200,',
+        miniWall: '#17171e', miniFloor: '#1e1e30',
+        tileColors: { 2:'#9f2c2c', 3:'#5e5e8a', 4:'#3a3a6a', 5:'#d9534f', 6:'#4a4a8a', 7:'#5a3a6a' }
+    },
+    {
+        wall: '#8a2020', wallBg: '#0f0808',
+        wallFills: ['#271414', '#1e0e0e', '#160a0a', '#0f0808'],
+        scanA: 'rgba(138,32,32,', scanB: 'rgba(220,80,60,',
+        miniWall: '#1e1414', miniFloor: '#301a1a',
+        tileColors: { 2:'#d9534f', 3:'#8a5e3d', 4:'#6a3a3a', 5:'#ff4040', 6:'#c03030', 7:'#8a4020' }
+    }
 ];
 
-const chestPoolMaster = [
-    { story: "重い鎖で厳重に封印された、黒い箱がある。\n『これを開ければ、他者を出し抜く禁断の知識が手に入る』と、頭の中に底知れぬ声が響いた。", choices: [ { text: "罠の構造を見切り、呪いを回避して知識だけを抽出する", type: "magician" }, { text: "絶対的な支配者の自信と共に、堂々と鎖を断ち切る", type: "ruler" }, { text: "恐ろしい気配を感じる。決して触れずに立ち去る", type: "innocent" }, { text: "何が起きるか分からないからこそ、面白半分で開ける", type: "jester" }] },
-    { story: "祭壇の上に、かつての支配者が被っていたとされる古びた冠が置かれている。\n権力と執着の、魅惑的な光をかすかに放っている。", choices: [ { text: "当然自分のものだ。迷わず頭に被り絶対的支配を望む", type: "ruler" }, { text: "支配など興味はない。未踏の地を求めて通り過ぎる", type: "explorer" }, { text: "過去の権威への反逆の証として、冠を叩き潰す", type: "outlaw" }, { text: "冠を溶かし、自分のための新しい装飾品を鋳造する", type: "creator" }] },
-    { story: "壁に一枚の巨大な白紙の羊皮紙と、血のインクが置かれている。\n何かを記さねば、この部屋からは出られないようだ。", choices: [ { text: "血のインクを使い、激しく情熱的な紋章を描く", type: "lover" }, { text: "これまでの迷宮の正確な構造と罠の位置を書き残す", type: "sage" }, { text: "真面目な空気を嫌い、不真面目で滑稽な落書きをする", type: "jester" }, { text: "間違えるのが怖いため、当たり障りのない記号を書く", type: "everyman" }] }
+function applyFloorTheme(floor) {
+    document.body.classList.remove('floor-1', 'floor-2');
+    if (floor === 1) document.body.classList.add('floor-1');
+    else if (floor === 2) document.body.classList.add('floor-2');
+}
+
+// ─────────────────────────────────────────────
+// 画面遷移
+// ─────────────────────────────────────────────
+function transitionTo(targetId, callback) {
+    cancelTypewriter();
+    const wrapper = document.getElementById('main-wrapper');
+    wrapper.classList.add('fade-out');
+    setTimeout(() => {
+        ['prologue-ui','dungeon-ui','story-ui','battle-ui','result-ui'].forEach(id => {
+            document.getElementById(id).style.display = 'none';
+        });
+        const targetEl = document.getElementById(targetId);
+        targetEl.style.display = (targetId === 'dungeon-ui') ? 'flex' : 'block';
+        if (callback) callback();
+        document.getElementById('game-top').scrollIntoView({ behavior: 'auto' });
+        wrapper.classList.remove('fade-out');
+    }, 180);
+}
+
+// ─────────────────────────────────────────────
+// イベントデータ（三層分）
+// ─────────────────────────────────────────────
+const baseFloorMaps = [
+    [
+        [1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,1,0,0,0,0,0,1],
+        [1,0,1,0,1,0,1,1,1,0,1],
+        [1,0,1,0,0,0,0,0,1,0,1],
+        [1,0,1,1,1,0,1,0,1,0,1],
+        [1,0,0,0,0,0,1,0,0,0,1],
+        [1,1,1,0,1,1,1,1,1,0,1],
+        [1,0,0,0,1,0,0,0,0,0,1],
+        [1,0,1,1,1,0,1,1,1,1,1],
+        [1,0,0,0,0,0,0,0,0,6,1],
+        [1,1,1,1,1,1,1,1,1,1,1]
+    ],
+    [
+        [1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,1,0,0,0,1],
+        [1,0,1,1,1,0,1,0,1,0,1],
+        [1,0,0,0,1,0,0,0,1,0,1],
+        [1,1,1,0,1,1,1,0,1,0,1],
+        [1,0,0,0,0,0,1,0,1,0,1],
+        [1,0,1,1,1,0,1,0,1,0,1],
+        [1,0,1,0,0,0,0,0,1,0,1],
+        [1,0,1,0,1,1,1,1,1,0,1],
+        [1,0,0,0,0,0,0,0,0,6,1],
+        [1,1,1,1,1,1,1,1,1,1,1]
+    ],
+    [
+        [1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,1,0,0,0,0,0,1],
+        [1,0,1,0,1,0,1,1,1,0,1],
+        [1,0,1,0,0,0,1,0,0,0,1],
+        [1,0,1,1,1,0,1,0,1,1,1],
+        [1,0,0,0,1,0,0,0,0,0,1],
+        [1,1,1,0,1,1,1,1,1,0,1],
+        [1,0,0,0,0,0,0,0,1,0,1],
+        [1,0,1,1,1,1,1,0,1,0,1],
+        [1,0,0,0,0,0,0,0,0,5,1],
+        [1,1,1,1,1,1,1,1,1,1,1]
+    ]
 ];
 
-let map = [], px = 1, py = 1, dir = 1;
+const floorEventBlueprints = [
+    {
+        name: '第一層：忘却の書架',
+        crystal: {
+            story: `崩れた書棚のあいだで、赤く脈打つ結晶が呼吸している。
+そこには、あなたが捨てた最初の願いと、その願いを裏切った夜の記録が封じられていた。`,
+            choices: [
+                { text: '結晶に刻まれた矛盾を読み解き、真相を言葉にする', type: 'sage' },
+                { text: '「まだやり直せる」と願い、汚れた頁ごと抱きしめる', type: 'innocent' },
+                { text: '痛みごと胸に迎え入れ、愛したものの名を呼ぶ', type: 'lover' },
+                { text: '結晶を砕き、欺瞞の記録そのものを終わらせる', type: 'outlaw' }
+            ]
+        },
+        npc: {
+            story: `棚影に、力尽きかけた旅人の影が膝をついている。
+「ここで終わりたくない」と呟くその声は、過去のあなたに酷似していた。`,
+            choices: [
+                { text: '肩を貸し、立ち上がるまで静かに支える', type: 'caregiver' },
+                { text: '剣を握らせ、自力で一歩踏み出させる', type: 'hero' },
+                { text: '共に腰を下ろし、無理のない道筋を探る', type: 'everyman' },
+                { text: '影を解析し、崩壊寸前の原因を見抜く', type: 'magician' }
+            ]
+        },
+        chest: {
+            story: `朽ちた閲覧卓の上に、鍵のない小箱がある。
+蓋を撫でると、内部から「まだ見ぬ自分を選べ」と囁きが返ってきた。`,
+            choices: [
+                { text: '中身より先に、外の世界へ持ち出す方法を探す', type: 'explorer' },
+                { text: '中の素材を組み替え、新しい道具へ作り替える', type: 'creator' },
+                { text: '自分こそ相応しいと定め、箱の主になる', type: 'ruler' },
+                { text: '深刻な囁きを笑い飛ばし、勢いで開けてみる', type: 'jester' }
+            ]
+        }
+    },
+    {
+        name: '第二層：反響する回廊',
+        crystal: {
+            story: `回廊の中央に浮かぶ結晶が、無数の失敗した未来像を映し出している。
+いずれの像も、あなたに「次の一手」を迫っていた。`,
+            choices: [
+                { text: '最も危険な未来を選び、真正面から打ち破る', type: 'hero' },
+                { text: '未来像に共通する法則を見抜き、静かに整理する', type: 'sage' },
+                { text: 'まだ誰も見ていない抜け道を探しに動く', type: 'explorer' },
+                { text: '未来像を書き換える術式をその場で編み上げる', type: 'magician' }
+            ]
+        },
+        npc: {
+            story: `鏡面の廊下で、冠を抱えた亡霊が立ち尽くしている。
+「誰かに認められねば、私は空になる」と震える声で訴えた。`,
+            choices: [
+                { text: '恐れを責めず、無傷の価値を思い出させる', type: 'innocent' },
+                { text: '手を取り、失いたくないものの名を語らせる', type: 'lover' },
+                { text: '冠を受け継ぎ、この場の秩序を立て直す', type: 'ruler' },
+                { text: '寄り添いながら、傷口に布を当てて呼吸を整える', type: 'caregiver' }
+            ]
+        },
+        chest: {
+            story: `封蝋の割れた保管庫の中で、古い契約書と歪んだ仮面が眠っている。
+「従うか、作り変えるか」と回廊全体が試してくる。`,
+            choices: [
+                { text: '契約ごと焼き払い、誰の脚本にも従わないと決める', type: 'outlaw' },
+                { text: '極端な賭けを避け、使える部分だけ現実的に残す', type: 'everyman' },
+                { text: '仮面の断片を素材に、新しい役割を設計する', type: 'creator' },
+                { text: '仮面を被って一芝居うち、真実をあぶり出す', type: 'jester' }
+            ]
+        }
+    },
+    {
+        name: '第三層：深淵の心室',
+        crystal: {
+            story: `最後の結晶は、心臓のように脈打ちながら闇の中央に吊られていた。
+近づくほどに、あなたの核心に近い欲望が剥き出しになっていく。`,
+            choices: [
+                { text: '結晶が示す真理を受け止め、最終解を見定める', type: 'sage' },
+                { text: '脈動へ踏み込み、恐れごと我が力に変える', type: 'hero' },
+                { text: '脈動を支配し、この層の秩序そのものを掌握する', type: 'ruler' },
+                { text: '結晶の欠片を使い、己の新しい象徴を創り出す', type: 'creator' }
+            ]
+        },
+        npc: {
+            story: `深淵の縁に、鎖を引きずるもう一人のあなたが立っている。
+「本音を言えば全て壊れる」と、その影は唇を噛んだ。`,
+            choices: [
+                { text: 'それでも光は残ると告げ、恐れを和らげる', type: 'innocent' },
+                { text: '鎖を断ち切り、壊れるなら壊して進むと言い切る', type: 'outlaw' },
+                { text: '縁の先へ歩き出し、未知の景色へ共に向かう', type: 'explorer' },
+                { text: '本音を少しずつ言葉にし、地上へ戻る段取りを組む', type: 'everyman' }
+            ]
+        },
+        chest: {
+            story: `最奥の棺に似た箱の中で、未完成の詩と割れた鏡が淡く光っている。
+ここで選ぶ言葉が、帰還後のあなたの顔になる。`,
+            choices: [
+                { text: '胸の衝動に従い、誰かへ届く詩句を書き残す', type: 'lover' },
+                { text: '鏡像を統合する術式を描き、傷と力を結び直す', type: 'magician' },
+                { text: '未来の自分を守るため、優しい誓いを封じる', type: 'caregiver' },
+                { text: '重すぎる空気を崩し、笑いで最後の緊張をほどく', type: 'jester' }
+            ]
+        }
+    }
+];
+
+// ─── 雑魚敵データ（タイル7） ───────────────────
+const ENEMY_BY_FLOOR = [
+    {
+        title: '【 ペルソナの残骸 ─ 彷徨う仮面 】',
+        story: `書棚の影から、崩れかけた仮面の塊が這い出てきた。
+かつて誰かが捨てた「演じた自己」の残骸が、あなたに取り憑こうと手を伸ばしてくる。
+目が合った瞬間、頭の中に知らない記憶が流れ込んできた。`,
+        choices: [
+            { text: '剣を抜き、仮面を真正面から叩き割る', type: 'hero' },
+            { text: '仮面の構造を冷静に分析し、弱点を見抜く', type: 'sage' },
+            { text: '仮面の嘆きに耳を傾け、静かに語りかける', type: 'caregiver' },
+            { text: '俊敏に身を翻し、素早く迂回して通り抜ける', type: 'explorer' }
+        ],
+        winText: '仮面の残骸は砕け散り、その中から薄い光の欠片が零れ落ちた。\n魂の一片を取り戻した感覚がある。先へ進もう。',
+    },
+    {
+        title: '【 歪みし自己像 ─ 鏡の怪 】',
+        story: `鏡面の廊下で、あなたの歪んだ鏡像が実体を持って立ちはだかった。
+それはあなたの最悪の側面を映し出し、「お前の本質はこれだ」と囁く。
+鏡像の目は、あなたが最も認めたくない真実を知っていた。`,
+        choices: [
+            { text: '「それも私だ」と認め、像に向かって手を伸ばす', type: 'magician' },
+            { text: '像の核心にある恐れを喝破し、言葉で分解する', type: 'sage' },
+            { text: '今まで抑えていた感情を全てぶつけ、像を打ち砕く', type: 'outlaw' },
+            { text: '鏡像を無視し、笑い飛ばして廊下の端へ追い詰める', type: 'jester' }
+        ],
+        winText: '鏡像は光の粒子に分解され、あなたの内側へと還っていった。\n自己の一面を統合した。この回廊を前へ進もう。',
+    },
+    {
+        title: '【 深淵の守門者 ─ 魂の番人 】',
+        story: `最終層の廊下に、漆黒の鎧を纏った守門者が仁王立ちしている。
+「お前の魂はまだ十分に深く刻まれていない」と、その声は空間そのものを震わせた。
+通り抜けるには、この存在と向き合うしかない。`,
+        choices: [
+            { text: '「私の魂は私自身が定める」と宣言し、正面突破する', type: 'ruler' },
+            { text: 'これまでの三層の選択を静かに語り、通行を求める', type: 'sage' },
+            { text: '全力を解放し、守門者の権威ごと打ち砕く', type: 'hero' },
+            { text: '愛と覚悟を込めた言葉を放ち、その心を動かす', type: 'lover' }
+        ],
+        winText: '守門者は一礼し、通路を開けた。「汝の魂の重さを認める」と呟いて消えた。\n最後の門が開かれた。ボスの間は近い。',
+    }
+];
+
+// ─────────────────────────────────────────────
+// ゲーム状態
+// ─────────────────────────────────────────────
+let maps = [], currentFloor = 0;
+let px = 1, py = 1, dir = 1;
 const dx = [0, 1, 0, -1], dy = [-1, 0, 1, 0];
 let discovered = [];
 let scores = {};
 let crystals = 0;
+let floorCrystalCollected = [false, false, false];
+let floorEventState = [];
 let decisionStartTime = 0, decisionTimes = [];
-let currentCrystalPool = [], currentNPCEvent = null, currentChestEvent = null;
+let choiceHistory = [];
 
 function shuffleArray(array) {
     const arr = [...array];
@@ -394,50 +985,64 @@ function shuffleArray(array) {
     return arr;
 }
 
-function resetGameState() {
-    const baseMap = [
-        [1,1,1,1,1,1,1,1,1,1,1],
-        [1,0,0,0,1,0,1,0,0,0,1], 
-        [1,0,1,0,1,0,1,1,1,0,1],
-        [1,0,1,0,0,0,0,0,0,0,1],
-        [1,0,1,1,1,0,1,1,1,0,1],
-        [1,0,0,0,0,0,0,0,1,0,1], 
-        [1,1,1,1,1,0,1,1,1,0,1],
-        [1,0,0,0,0,0,1,0,0,0,1], 
-        [1,0,1,1,1,0,1,1,1,1,1],
-        [1,0,0,0,1,5,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1]
-    ];
-    map = baseMap.map(row => [...row]);
-    px = 1; py = 1; dir = 1;
-    discovered = Array.from({length: 11}, () => Array(11).fill(false));
-    scores = { innocent:0, explorer:0, sage:0, hero:0, outlaw:0, magician:0, everyman:0, lover:0, jester:0, caregiver:0, creator:0, ruler:0 };
-    crystals = 0; decisionTimes = [];
-    document.getElementById('dungeon-status').innerText = `記憶の結晶 [ 0 / 3 ]`;
-    document.body.classList.remove('victory-theme');
+function cloneMap(mapData) { return mapData.map(row => [...row]); }
+function getFloorLabel(index = currentFloor) { return `第${index + 1}層`; }
 
+function updateDungeonStatus(extra = '') {
+    const filled = '◆'.repeat(crystals);
+    const empty  = '◇'.repeat(3 - crystals);
+    const floorState = floorCrystalCollected[currentFloor] ? '結晶回収済' : '結晶未回収';
+    document.getElementById('dungeon-status').innerText =
+        `${getFloorLabel()} | 記憶の結晶 ${filled}${empty} | 層の残響：${extra || floorState}`;
+}
+
+function placeEventTile(floorMap, tileValue) {
     let emptyCells = [];
-    for(let y=1; y<10; y++) {
-        for(let x=1; x<10; x++) {
-            if(map[y][x] === 0 && !(x === 1 && y === 1)) {
-                emptyCells.push({x: x, y: y});
-            }
+    for (let y = 1; y < 10; y++) {
+        for (let x = 1; x < 10; x++) {
+            if (floorMap[y][x] === 0 && !(x === 1 && y === 1)) emptyCells.push({ x, y });
         }
     }
     emptyCells = shuffleArray(emptyCells);
-    
-    map[emptyCells[0].y][emptyCells[0].x] = 2;
-    map[emptyCells[1].y][emptyCells[1].x] = 2;
-    map[emptyCells[2].y][emptyCells[2].x] = 2;
-    map[emptyCells[3].y][emptyCells[3].x] = 3;
-    map[emptyCells[4].y][emptyCells[4].x] = 4;
-
-    currentCrystalPool = shuffleArray(crystalPoolMaster).slice(0, 3);
-    currentNPCEvent = shuffleArray(npcPoolMaster)[0];
-    currentChestEvent = shuffleArray(chestPoolMaster)[0];
+    const spot = emptyCells[0];
+    floorMap[spot.y][spot.x] = tileValue;
 }
 
-const S = [180, 110, 50, 15]; 
+function resetGameState() {
+    maps = baseFloorMaps.map(cloneMap);
+    currentFloor = 0;
+    px = 1; py = 1; dir = 1;
+    discovered = baseFloorMaps.map(() => Array.from({ length: 11 }, () => Array(11).fill(false)));
+    scores = { innocent:0, explorer:0, sage:0, hero:0, outlaw:0, magician:0, everyman:0, lover:0, jester:0, caregiver:0, creator:0, ruler:0 };
+    crystals = 0;
+    floorCrystalCollected = [false, false, false];
+    decisionTimes = [];
+    choiceHistory = [];
+    document.body.classList.remove('victory-theme', 'floor-1', 'floor-2');
+
+    floorEventState = floorEventBlueprints.map((floorData, index) => ({
+        floorName: floorData.name,
+        crystal: JSON.parse(JSON.stringify(floorData.crystal)),
+        npc: JSON.parse(JSON.stringify(floorData.npc)),
+        chest: JSON.parse(JSON.stringify(floorData.chest)),
+        crystalDone: false, npcDone: false, chestDone: false, gateCleared: false, index
+    }));
+
+    maps.forEach((floorMap, index) => {
+        placeEventTile(floorMap, 2); // crystal
+        placeEventTile(floorMap, 3); // npc
+        placeEventTile(floorMap, 4); // chest
+        placeEventTile(floorMap, 7); // enemy
+        floorMap[9][9] = index === 2 ? 5 : 6;
+    });
+
+    updateDungeonStatus();
+}
+
+// ─────────────────────────────────────────────
+// Canvas / ダンジョン描画
+// ─────────────────────────────────────────────
+const S = [180, 110, 50, 15];
 const R = S.map(s => ({ x: 160-s, y: 160-s, w: s*2, h: s*2 }));
 let ctx = null, miniCtx = null;
 
@@ -448,88 +1053,136 @@ function initCanvas() {
     if (c2) miniCtx = c2.getContext('2d');
 }
 
-function getCell(x, y) { if(x < 0 || y < 0 || y >= map.length || x >= map[0].length) return 1; return map[y][x]; }
+function getActiveMap() { return maps[currentFloor]; }
+function getCell(x, y) {
+    const m = getActiveMap();
+    if (x < 0 || y < 0 || y >= m.length || x >= m[0].length) return 1;
+    return m[y][x];
+}
 function getRel(f, r) { return getCell(px + dx[dir]*f + dx[(dir+1)%4]*r, py + dy[dir]*f + dy[(dir+1)%4]*r); }
 
 function updateMinimap() {
-    discovered[py][px] = true;
-    for(let i=0; i<4; i++) {
-        let nx = px+dx[i], ny = py+dy[i];
-        if(ny>=0 && ny<11 && nx>=0 && nx<11) discovered[ny][nx] = true;
+    const floorMap = getActiveMap();
+    const floorSeen = discovered[currentFloor];
+    const theme = FLOOR_THEMES[currentFloor];
+    floorSeen[py][px] = true;
+    for (let i = 0; i < 4; i++) {
+        let nx = px + dx[i], ny = py + dy[i];
+        if (ny >= 0 && ny < 11 && nx >= 0 && nx < 11) floorSeen[ny][nx] = true;
     }
     miniCtx.clearRect(0, 0, 88, 88);
-    for(let y=0; y<11; y++) {
-        for(let x=0; x<11; x++) {
-            if(!discovered[y][x]) continue;
-            miniCtx.fillStyle = map[y][x]===1 ? '#1a1d17' : (map[y][x]>=2 ? '#7a1f1f' : '#2d3826');
+    for (let y = 0; y < 11; y++) {
+        for (let x = 0; x < 11; x++) {
+            if (!floorSeen[y][x]) continue;
+            const tile = floorMap[y][x];
+            miniCtx.fillStyle = tile === 1 ? theme.miniWall : (theme.tileColors[tile] || theme.miniFloor);
             miniCtx.fillRect(x*8, y*8, 8, 8);
-            miniCtx.strokeStyle = '#000'; miniCtx.strokeRect(x*8, y*8, 8, 8);
+            miniCtx.strokeStyle = '#000';
+            miniCtx.strokeRect(x*8, y*8, 8, 8);
         }
     }
-    miniCtx.fillStyle = '#c5a963'; miniCtx.fillRect(px*8+2, py*8+2, 4, 4);
+    miniCtx.fillStyle = '#c5a963';
+    miniCtx.fillRect(px*8+2, py*8+2, 4, 4);
 }
 
 function drawView() {
     updateMinimap();
-    ctx.fillStyle = '#080a08'; ctx.fillRect(0, 0, 320, 320);
-    ctx.strokeStyle = '#4a5e3d'; ctx.lineWidth = 1.5;
-    let maxD = 3;
-    for(let d = 0; d <= 3; d++) { if(getRel(d, 0) === 1) { maxD = d; break; } }
+    const theme = FLOOR_THEMES[currentFloor];
+    ctx.fillStyle = theme.wallBg;
+    ctx.fillRect(0, 0, 320, 320);
 
-    for(let d = maxD; d >= 0; d--) {
+    ctx.lineWidth = 0.8;
+    for (let y = 0; y < 320; y += 14) {
+        if (y < 160) ctx.strokeStyle = `${theme.scanA}${(1 - y / 160) * 0.13})`;
+        else         ctx.strokeStyle = `${theme.scanB}${((y - 160) / 160) * 0.07})`;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(320, y); ctx.stroke();
+    }
+
+    ctx.strokeStyle = theme.wall;
+    ctx.lineWidth = 1.5;
+    let maxD = 3;
+    for (let d = 0; d <= 3; d++) { if (getRel(d, 0) === 1) { maxD = d; break; } }
+
+    for (let d = maxD; d >= 0; d--) {
         let f = getRel(d, 0), l = getRel(d, -1), r = getRel(d, 1), rd = R[d], rdn = (d < 3) ? R[d+1] : null;
+        ctx.fillStyle = theme.wallFills[Math.min(d, 3)];
 
         if (d < 3) {
             ctx.beginPath();
-            ctx.moveTo(rd.x, rd.y); ctx.lineTo(rdn.x, rdn.y); ctx.moveTo(rd.x+rd.w, rd.y); ctx.lineTo(rdn.x+rdn.w, rdn.y);
-            ctx.moveTo(rd.x, rd.y+rd.h); ctx.lineTo(rdn.x, rdn.y+rdn.h); ctx.moveTo(rd.x+rd.w, rd.y+rd.h); ctx.lineTo(rdn.x+rdn.w, rdn.y+rdn.h); ctx.stroke();
+            ctx.moveTo(rd.x, rd.y); ctx.lineTo(rdn.x, rdn.y);
+            ctx.moveTo(rd.x+rd.w, rd.y); ctx.lineTo(rdn.x+rdn.w, rdn.y);
+            ctx.moveTo(rd.x, rd.y+rd.h); ctx.lineTo(rdn.x, rdn.y+rdn.h);
+            ctx.moveTo(rd.x+rd.w, rd.y+rd.h); ctx.lineTo(rdn.x+rdn.w, rdn.y+rdn.h);
+            ctx.stroke();
         }
-        
-        if (l === 1 && d < 3) { 
-            ctx.beginPath(); ctx.moveTo(rd.x, rd.y); ctx.lineTo(rdn.x, rdn.y); ctx.lineTo(rdn.x, rdn.y+rdn.h); ctx.lineTo(rd.x, rd.y+rd.h); ctx.closePath(); ctx.fill(); ctx.stroke();
-        } else if (l !== 1 && d < 3) { 
+
+        if (l === 1 && d < 3) {
+            ctx.beginPath();
+            ctx.moveTo(rd.x, rd.y); ctx.lineTo(rdn.x, rdn.y); ctx.lineTo(rdn.x, rdn.y+rdn.h); ctx.lineTo(rd.x, rd.y+rd.h); ctx.closePath();
+            ctx.fill(); ctx.stroke();
+        } else if (l !== 1 && d < 3) {
             ctx.beginPath(); ctx.moveTo(rdn.x, rdn.y); ctx.lineTo(rd.x, rdn.y); ctx.moveTo(rdn.x, rdn.y+rdn.h); ctx.lineTo(rd.x, rdn.y+rdn.h); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(rdn.x, rdn.y); ctx.lineTo(rdn.x, rdn.y+rdn.h); ctx.stroke();
         }
-        
-        if (r === 1 && d < 3) { 
-            ctx.beginPath(); ctx.moveTo(rd.x+rd.w, rd.y); ctx.lineTo(rdn.x+rdn.w, rdn.y); ctx.lineTo(rdn.x+rdn.w, rdn.y+rdn.h); ctx.lineTo(rd.x+rd.w, rd.y+rd.h); ctx.closePath(); ctx.fill(); ctx.stroke();
-        } else if (r !== 1 && d < 3) { 
-            ctx.beginPath(); ctx.moveTo(rdn.x+rdn.w, rdn.y); ctx.lineTo(rd.x+rd.w, rdn.y); ctx.moveTo(rdn.x+rdn.w, rdn.y+rdn.h); ctx.lineTo(rd.x+rd.w, rdn.y+rd.h); ctx.stroke();
+
+        if (r === 1 && d < 3) {
+            ctx.beginPath();
+            ctx.moveTo(rd.x+rd.w, rd.y); ctx.lineTo(rdn.x+rdn.w, rdn.y); ctx.lineTo(rdn.x+rdn.w, rdn.y+rdn.h); ctx.lineTo(rd.x+rd.w, rd.y+rd.h); ctx.closePath();
+            ctx.fill(); ctx.stroke();
+        } else if (r !== 1 && d < 3) {
+            ctx.beginPath(); ctx.moveTo(rdn.x+rdn.w, rdn.y); ctx.lineTo(rd.x+rd.w, rdn.y); ctx.moveTo(rdn.x+rdn.w, rdn.y+rdn.h); ctx.lineTo(rd.x+rd.w, rd.y+rd.h); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(rdn.x+rdn.w, rdn.y); ctx.lineTo(rdn.x+rdn.w, rdn.y+rdn.h); ctx.stroke();
         }
 
-        if (d === maxD && f === 1) {
-            ctx.fillStyle = '#080a08'; ctx.fillRect(rd.x, rd.y, rd.w, rd.h); ctx.strokeRect(rd.x, rd.y, rd.w, rd.h);
-        }
-        
+        if (d === maxD && f === 1) { ctx.fillRect(rd.x, rd.y, rd.w, rd.h); ctx.strokeRect(rd.x, rd.y, rd.w, rd.h); }
+
         if (d > 0 && f >= 2) {
-            let cx = 160, cy = 160;
-            if (f === 2) { 
+            let cx_ = 160, cy_ = 160;
+            ctx.strokeStyle = theme.wall; ctx.lineWidth = 1.5;
+            if (f === 2) {
                 let size = S[d] * 0.3; ctx.fillStyle = '#a83232';
-                ctx.beginPath(); ctx.moveTo(cx, cy-size); ctx.lineTo(cx+size, cy); ctx.lineTo(cx, cy+size); ctx.lineTo(cx-size, cy); ctx.fill(); ctx.stroke();
-            } else if (f === 3) { 
+                ctx.beginPath(); ctx.moveTo(cx_, cy_-size); ctx.lineTo(cx_+size, cy_); ctx.lineTo(cx_, cy_+size); ctx.lineTo(cx_-size, cy_); ctx.fill(); ctx.stroke();
+            } else if (f === 3) {
                 let size = S[d] * 0.25; ctx.fillStyle = '#444';
-                ctx.fillRect(cx-size, cy, size*2, size*2); ctx.strokeRect(cx-size, cy, size*2, size*2);
-                ctx.beginPath(); ctx.arc(cx, cy-size*0.5, size*0.8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-            } else if (f === 4) { 
+                ctx.fillRect(cx_-size, cy_, size*2, size*2); ctx.strokeRect(cx_-size, cy_, size*2, size*2);
+                ctx.beginPath(); ctx.arc(cx_, cy_-size*0.5, size*0.8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            } else if (f === 4) {
                 let size = S[d] * 0.35; ctx.fillStyle = '#111';
-                ctx.fillRect(cx-size, cy, size*2, size); ctx.strokeRect(cx-size, cy, size*2, size);
-                ctx.strokeStyle = '#555'; ctx.beginPath(); ctx.moveTo(cx-size, cy+size/2); ctx.lineTo(cx+size, cy+size/2); ctx.stroke(); ctx.strokeStyle = '#4a5e3d';
-            } else if (f === 5) { 
+                ctx.fillRect(cx_-size, cy_, size*2, size); ctx.strokeRect(cx_-size, cy_, size*2, size);
+                ctx.strokeStyle = '#555'; ctx.beginPath(); ctx.moveTo(cx_-size, cy_+size/2); ctx.lineTo(cx_+size, cy_+size/2); ctx.stroke();
+                ctx.strokeStyle = theme.wall;
+            } else if (f === 5) {
                 let bw = S[d]*0.8, bh = S[d]*1.2; ctx.fillStyle = '#000';
-                ctx.fillRect(cx-bw, cy-bh+S[d], bw*2, bh*2); ctx.strokeRect(cx-bw, cy-bh+S[d], bw*2, bh*2);
-                ctx.fillStyle = '#a83232'; ctx.beginPath(); ctx.arc(cx, cy, S[d]*0.2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                ctx.fillRect(cx_-bw, cy_-bh+S[d], bw*2, bh*2); ctx.strokeRect(cx_-bw, cy_-bh+S[d], bw*2, bh*2);
+                ctx.fillStyle = '#a83232'; ctx.beginPath(); ctx.arc(cx_, cy_, S[d]*0.2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            } else if (f === 6) {
+                let size = S[d] * 0.3; ctx.fillStyle = theme.wall;
+                ctx.beginPath(); ctx.moveTo(cx_, cy_+size); ctx.lineTo(cx_+size, cy_-size); ctx.lineTo(cx_-size, cy_-size); ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx_, cy_-size*1.2); ctx.lineTo(cx_, cy_+size*1.4); ctx.stroke();
+            } else if (f === 7) {
+                // 雑魚敵：赤い眼
+                let size = S[d] * 0.28;
+                ctx.fillStyle = '#2a1010';
+                ctx.fillRect(cx_-size*1.3, cy_-size*0.7, size*2.6, size*1.5);
+                ctx.strokeStyle = '#aa1111'; ctx.lineWidth = 1;
+                ctx.strokeRect(cx_-size*1.3, cy_-size*0.7, size*2.6, size*1.5);
+                ctx.fillStyle = '#dd2222';
+                ctx.beginPath(); ctx.arc(cx_-size*0.42, cy_, size*0.24, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(cx_+size*0.42, cy_, size*0.24, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = theme.wall; ctx.lineWidth = 1.5;
             }
         }
     }
 }
 
 window.addEventListener('keydown', (e) => {
-    if(document.getElementById('dungeon-ui').style.display !== 'none') {
-        if(e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') moveForward();
-        if(e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') turn(-1);
-        if(e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') turn(1);
+    if (document.getElementById('dungeon-ui').style.display !== 'none') {
+        if (e.key === 'ArrowUp'    || e.key === 'w' || e.key === 'W') moveForward();
+        if (e.key === 'ArrowLeft'  || e.key === 'a' || e.key === 'A') turn(-1);
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') turn(1);
+    }
+    if ((e.key === ' ' || e.key === 'Enter') && document.getElementById('story-ui').style.display !== 'none') {
+        skipTypewriter();
     }
 });
 
@@ -543,11 +1196,15 @@ function showPrologue() {
 
 function startGame() {
     playSound('step');
+    applyFloorTheme(0);
+    startFloorBgm(0);
+    updateDungeonStatus(floorEventState[0].floorName);
     transitionTo('dungeon-ui', drawView);
 }
 
 function restartGame() {
     playSound('step');
+    stopBgm(0.5);
     resetGameState();
     transitionTo('prologue-ui');
 }
@@ -556,27 +1213,40 @@ function turn(amount) { dir = (dir + amount + 4) % 4; playSound('step'); drawVie
 
 function moveForward() {
     if (getRel(1, 0) !== 1) {
-        px += dx[dir]; py += dy[dir]; 
-        let tile = map[py][px];
-        drawView(); 
+        px += dx[dir]; py += dy[dir];
+        let tile = getActiveMap()[py][px];
+        drawView();
         if (tile >= 2) triggerEvent(tile);
         else playSound('step');
     }
 }
 
-function renderChoices(choices, typeId) {
+function markCurrentTileCleared() { getActiveMap()[py][px] = 0; }
+
+function renderChoices(choices, eventKey) {
     let choicesEl = document.getElementById('choices-area');
     choicesEl.innerHTML = '';
     let shuffled = shuffleArray(choices);
     shuffled.forEach(c => {
-        let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = c.text;
+        let btn = document.createElement('button');
+        btn.className = 'btn-choice';
+        btn.innerText = c.text;
         btn.onclick = () => {
             let timeTaken = Date.now() - decisionStartTime;
             decisionTimes.push(timeTaken);
-            
-            scores[c.type]++; 
-            if(typeId === 2) { crystals++; document.getElementById('dungeon-status').innerText = `記憶の結晶 [ ${crystals} / 3 ]`; }
-            map[py][px] = 0; 
+            scores[c.type]++;
+            choiceHistory.push({ type: c.type, floor: currentFloor, order: choiceHistory.length, eventKey, timeTaken });
+            if (eventKey === 'crystal') {
+                crystals++;
+                floorCrystalCollected[currentFloor] = true;
+                floorEventState[currentFloor].crystalDone = true;
+            } else if (eventKey === 'npc') {
+                floorEventState[currentFloor].npcDone = true;
+            } else if (eventKey === 'chest') {
+                floorEventState[currentFloor].chestDone = true;
+            }
+            markCurrentTileCleared();
+            updateDungeonStatus(floorEventState[currentFloor].floorName);
             playSound('step');
             transitionTo('dungeon-ui', drawView);
         };
@@ -584,229 +1254,477 @@ function renderChoices(choices, typeId) {
     });
 }
 
+function renderEnemyChoices(enemyData) {
+    let choicesEl = document.getElementById('choices-area');
+    choicesEl.innerHTML = '';
+    let shuffled = shuffleArray(enemyData.choices);
+    shuffled.forEach(c => {
+        let btn = document.createElement('button');
+        btn.className = 'btn-choice';
+        btn.innerText = c.text;
+        btn.onclick = () => {
+            let timeTaken = Date.now() - decisionStartTime;
+            decisionTimes.push(timeTaken);
+            scores[c.type]++;
+            choiceHistory.push({ type: c.type, floor: currentFloor, order: choiceHistory.length, eventKey: 'enemy', timeTaken });
+            markCurrentTileCleared();
+
+            const storyEl = document.getElementById('story-text');
+            const choicesEl2 = document.getElementById('choices-area');
+            storyEl.textContent = enemyData.winText;
+            choicesEl2.innerHTML = '';
+
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'btn-choice';
+            nextBtn.innerText = '先へ進む';
+            nextBtn.onclick = () => {
+                playSound('step');
+                updateDungeonStatus(floorEventState[currentFloor].floorName);
+                transitionTo('dungeon-ui', drawView);
+            };
+            choicesEl2.appendChild(nextBtn);
+        };
+        choicesEl.appendChild(btn);
+    });
+}
+
+function descendFloor() {
+    currentFloor++;
+    px = 1; py = 1; dir = 1;
+    applyFloorTheme(currentFloor);
+    startFloorBgm(currentFloor);
+    playSound('step');
+    updateDungeonStatus(floorEventState[currentFloor].floorName);
+    transitionTo('dungeon-ui', drawView);
+}
+
+function retreatFromGate() {
+    dir = (dir + 2) % 4;
+    px += dx[dir]; py += dy[dir];
+    playSound('step');
+    transitionTo('dungeon-ui', drawView);
+}
+
 function triggerEvent(type) {
-    playSound('event');
+    playSound(type === 7 ? 'enemy' : 'event');
     transitionTo('story-ui', () => {
-        let titleEl = document.getElementById('event-title');
-        let storyEl = document.getElementById('story-text');
-        
-        if (type === 2) { 
-            titleEl.innerText = `【 記憶の残滓 [ ${crystals + 1} / 3 ] 】`;
-            let data = currentCrystalPool[crystals];
-            storyEl.innerText = data.story;
-            renderChoices(data.choices, 2);
-        } else if (type === 3) { 
-            titleEl.innerText = "【 彷徨える影 】";
-            storyEl.innerText = currentNPCEvent.story;
-            renderChoices(currentNPCEvent.choices, 3);
-        } else if (type === 4) { 
-            titleEl.innerText = "【 封印された遺物 】";
-            storyEl.innerText = currentChestEvent.story;
-            renderChoices(currentChestEvent.choices, 4);
-        } else if (type === 5) { 
-            if (crystals < 3) {
-                titleEl.innerText = "【 閉ざされた扉 】";
-                storyEl.innerText = `冷たく重い鉄の扉が、あなたの行く手を拒絶している。
-失われた記憶の結晶がまだ足りないようだ。
-（現在の結晶: ${crystals} / 3個）`;
-                let choicesEl = document.getElementById('choices-area');
-                choicesEl.innerHTML = '';
-                let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = "引き返す";
-                btn.onclick = () => { dir = (dir + 2) % 4; px += dx[dir]; py += dy[dir]; playSound('step'); transitionTo('dungeon-ui', drawView); };
-                choicesEl.appendChild(btn);
+        let titleEl   = document.getElementById('event-title');
+        let storyEl   = document.getElementById('story-text');
+        let choicesEl = document.getElementById('choices-area');
+        choicesEl.innerHTML = '';
+        const floorData = floorEventState[currentFloor];
+
+        if (type === 2) {
+            titleEl.innerText = `【 記憶の残滓 / ${getFloorLabel()} 】`;
+            typeWriter(storyEl, floorData.crystal.story, 16, () => renderChoices(floorData.crystal.choices, 'crystal'));
+        } else if (type === 3) {
+            titleEl.innerText = `【 彷徨える影 / ${getFloorLabel()} 】`;
+            typeWriter(storyEl, floorData.npc.story, 16, () => renderChoices(floorData.npc.choices, 'npc'));
+        } else if (type === 4) {
+            titleEl.innerText = `【 封印された遺物 / ${getFloorLabel()} 】`;
+            typeWriter(storyEl, floorData.chest.story, 16, () => renderChoices(floorData.chest.choices, 'chest'));
+        } else if (type === 7) {
+            const enemyData = ENEMY_BY_FLOOR[currentFloor];
+            titleEl.innerHTML = `<span class="enemy-badge">⚔ 遭遇戦</span><br>${enemyData.title}`;
+            typeWriter(storyEl, enemyData.story, 16, () => renderEnemyChoices(enemyData));
+        } else if (type === 6) {
+            titleEl.innerText = `【 層の境界 / ${getFloorLabel()} 】`;
+            if (!floorCrystalCollected[currentFloor]) {
+                typeWriter(storyEl, `石段は下層へ続いているが、この層の記憶結晶がまだ脈打っている。\n${getFloorLabel()}の核を回収しなければ、先へ進む資格は得られない。`, 16, () => {
+                    let btn = document.createElement('button');
+                    btn.className = 'btn-choice';
+                    btn.innerText = 'この層を探索し直す';
+                    btn.onclick = retreatFromGate;
+                    choicesEl.appendChild(btn);
+                });
             } else {
-                startFinalBattle();
-                return; 
+                typeWriter(storyEl, `${getFloorLabel()}の結晶が胸の内で共鳴し、階下への石段が静かに開いた。\nより深い層へ降り、心の底へ近づこう。`, 16, () => {
+                    let btn = document.createElement('button');
+                    btn.className = 'btn-choice';
+                    btn.innerText = `${getFloorLabel(currentFloor + 1)}へ降りる`;
+                    btn.onclick = descendFloor;
+                    choicesEl.appendChild(btn);
+                });
+            }
+        } else if (type === 5) {
+            titleEl.innerText = '【 最終門 / 深淵の心室 】';
+            if (crystals < 3) {
+                typeWriter(storyEl, `門の中央に穿たれた穴が、なお空虚に口を開いている。\n三つの記憶結晶が揃うまで、深淵はあなたを受け入れない。`, 16, () => {
+                    let btn = document.createElement('button');
+                    btn.className = 'btn-choice'; btn.innerText = 'まだ探索を続ける';
+                    btn.onclick = retreatFromGate; choicesEl.appendChild(btn);
+                });
+            } else {
+                typeWriter(storyEl, `三層すべての結晶が共鳴し、最後の門が開く。\nあなたがここまで重ねた選択は、もはや逃れられぬ形で魂の輪郭となっていた。`, 16, () => {
+                    let btn = document.createElement('button');
+                    btn.className = 'btn-choice'; btn.innerText = '深淵の影と向き合う';
+                    btn.onclick = startFinalBattle; choicesEl.appendChild(btn);
+                });
             }
         }
         decisionStartTime = Date.now();
     });
 }
 
-// ----------------------------------------------------
-// アーキタイプ解説データ
-// ----------------------------------------------------
+// ─────────────────────────────────────────────
+// アーキタイプデータ
+// ─────────────────────────────────────────────
 const archetypeData = {
-    innocent: { 
-        title: "無垢なる者 (Innocent)", 
-        desc: "純粋さ、楽観主義、精度、そして調和を求めるアーキタイプです。不条理な世界の中でも「正しさ」や「安全」を信じ、他者や環境に対して誠実であろうとします。", 
-        shadowName: "現実逃避と否認の狂気", 
-        shadowDesc: "現実の困難から目を背け、不都合な真実を無視する「否認」や「現実逃避」に陥る傾向があります。", 
-        group: "slow", 
-        quote: "「私たちが他人に苛立つすべてのことは、私たち自身を理解することに繋がる。」" 
-    },
-    explorer: { 
-        title: "探求者 (Explorer)", 
-        desc: "自由と新しい体験を求め、未知の世界を開拓するアーキタイプです。既存の枠組みに縛られることを嫌い、常に自立と自己発見を目指して行動します。", 
-        shadowName: "永遠の放浪と孤独", 
-        shadowDesc: "一つの場所に留まることができず、現実の問題から逃げ続ける「永遠の放浪者」になる恐れがあります。", 
-        group: "mid", 
-        quote: "「私は、私に起こったことではなく、私が選択したものになる。」" 
-    },
-    sage: { 
-        title: "賢者 (Sage)", 
-        desc: "真実と知識を追求し、世界を客観的・論理的に理解しようとするアーキタイプです。感情に流されず、深い洞察力をもって事物の本質を見ぬく力を持っています。", 
-        shadowName: "冷酷なる傲慢と逃避", 
-        shadowDesc: "共感性を失い、すべてを理屈で正当化する冷酷さや、行動を起こさず知識の世界に逃避する傾向があります。", 
-        group: "slow", 
-        quote: "「外を見る者は夢を見る。内を見る者は目覚める。」" 
-    },
-    hero: { 
-        title: "英雄 (Hero)", 
-        desc: "目標を達成し、困難を乗り越えることで自らの価値を証明しようとするアーキタイプです。逆境において最も力を発揮し、弱者を守るための勇気と行動力を持ちます。", 
-        shadowName: "戦いを求める暴君", 
-        shadowDesc: "他者の弱さを許容できず、常に戦いを求めて傲慢な暴君となるか、無意味な戦いで自滅する傾向があります。", 
-        group: "fast", 
-        quote: "「あなたの恐れがある場所にこそ、あなたの課題がある。」" 
-    },
-    outlaw: { 
-        title: "無法者 (Outlaw)", 
-        desc: "既存のルールや古い体制を破壊し、根本的な変革をもたらすアーキタイプです。社会の矛盾や理不尽に対して反逆し、ゼロから新しいものを構築するエネルギーを持ちます。", 
-        shadowName: "全てを壊す虚無主義", 
-        shadowDesc: "建設的な目的を見失い、ただ壊すこと自体に快感を覚える破壊衝動や虚無主義に陥る危険性があります。", 
-        group: "fast", 
-        quote: "「天国まで枝を伸ばすには、根を地獄まで降ろさなければならない。」" 
-    },
-    magician: { 
-        title: "魔術師 (Magician)", 
-        desc: "事物の根本的な法則を直感的に理解し、自身のビジョンを現実化させるアーキタイプです。相反する要素を統合し、状況を根本から変容（シフト）させる力を持ちます。", 
-        shadowName: "他者を操る黒魔術", 
-        shadowDesc: "己の直感や能力を過信し、他者を自分の都合よく操作しようとする「詐欺師」や「黒魔術」的な側面に転じる恐れがあります。", 
-        group: "mid", 
-        quote: "「無意識を意識化しない限り、それはあなたの人生を支配し、あなたはそれを運命と呼ぶだろう。」" 
-    },
-    everyman: { 
-        title: "一般人 (Everyman)", 
-        desc: "他者との平等な繋がりや、コミュニティへの帰属を求めるアーキタイプです。特別な存在になることよりも、地に足のついた日常や、人々との連帯感を重んじます。", 
-        shadowName: "責任放棄と被害者意識", 
-        shadowDesc: "目立つことや自立を恐れ、集団の意見に無批判に同調したり、自らの責任を放棄する被害者意識に陥りやすくなります。", 
-        group: "slow", 
-        quote: "「孤独とは人が周りにいないことではなく、自分にとって重要なことを伝えられないことから生じる。」" 
-    },
-    lover: { 
-        title: "恋人 (Lover)", 
-        desc: "親密さ、美、情熱を重んじ、他者や物事と深い関係を築こうとするアーキタイプです。五感が豊かで、対象の魅力を最大限に引き出す力を持っています。", 
-        shadowName: "執着と嫉妬の依存", 
-        shadowDesc: "見捨てられることを極度に恐れ、対象への強い執着や嫉妬心を抱き、自己を見失う「依存」に陥る危険性があります。", 
-        group: "mid", 
-        quote: "「二つの人格の出会いは、二つの化学物質の接触のようなものだ。少しでも反応があれば、両者とも変容する。」" 
-    },
-    jester: { 
-        title: "道化師 (Jester)", 
-        desc: "ユーモアと遊び心で今この瞬間を楽しみ、周囲に活力を与えるアーキタイプです。硬直したルールを笑い飛ばし、深刻すぎる状況に風穴を開ける役割を持ちます。", 
-        shadowName: "痛みを直視せぬ不誠実", 
-        shadowDesc: "人生の重大な問題から目を背け、すべてを茶化して責任を取ろうとしない不誠実さに繋がる恐れがあります。", 
-        group: "fast", 
-        quote: "「すべての混沌には宇宙があり、すべての無秩序には秘密の秩序がある。」" 
-    },
-    caregiver: { 
-        title: "援助者 (Caregiver)", 
-        desc: "他者を保護し、育成し、思いやりを持って奉仕するアーキタイプです。高い共感力を持ち、周囲の人々にとって安心できる安全網（セーフティネット）として機能します。", 
-        shadowName: "自立を奪う支配的な愛", 
-        shadowDesc: "「他者を助けること」に過度に依存し、相手の自立を妨げる過干渉や共依存の関係を作り出してしまう危険性があります。", 
-        group: "slow", 
-        quote: "「自分自身の闇を知ることこそ、他人の闇に対処するための最良の方法である。」" 
-    },
-    creator: { 
-        title: "創造者 (Creator)", 
-        desc: "想像力を形にし、永続する価値や新しいものを生み出すアーキタイプです。自己表現の欲求が強く、独自の美学やビジョンを現実の世界で具現化しようとします。", 
-        shadowName: "自己破壊的な完璧主義", 
-        shadowDesc: "自身のビジョンに執着するあまり、思い通りにならない現実に対して激しい怒りを抱く「自己破壊的な完璧主義」に陥りやすくなります。", 
-        group: "mid", 
-        quote: "「新しいものの創造は知性によってではなく、内的欲求から働く遊びの衝動によって達成される。」" 
-    },
-    ruler: { 
-        title: "支配者 (Ruler)", 
-        desc: "秩序と構造を作り出し、コミュニティや組織をコントロールするリーダーのアーキタイプです。責任感が強く、全体の利益のために安定した環境を構築する能力を持ちます。", 
-        shadowName: "全てを抑圧する偏執狂", 
-        shadowDesc: "コントロールを失うことへの恐怖から、他者の意見を許容できず、権力によってすべてを抑圧するパラノイア（偏執狂）に陥る危険性があります。", 
-        group: "fast", 
-        quote: "「あなたが抵抗するものは、持続する。」" 
-    }
+    innocent:  { title:'無垢なる者 (Innocent)',   desc:'純粋さ、楽観主義、精度、そして調和を求めるアーキタイプです。不条理な世界の中でも「正しさ」や「安全」を信じ、他者や環境に対して誠実であろうとします。', shadowName:'現実逃避と否認の狂気',     shadowDesc:'現実の困難から目を背け、不都合な真実を無視する「否認」や「現実逃避」に陥る傾向があります。', group:'slow', quote:'「私たちが他人に苛立つすべてのことは、私たち自身を理解することに繋がる。」' },
+    explorer:  { title:'探求者 (Explorer)',        desc:'自由と新しい体験を求め、未知の世界を開拓するアーキタイプです。既存の枠組みに縛られることを嫌い、常に自立と自己発見を目指して行動します。',                 shadowName:'永遠の放浪と孤独',         shadowDesc:'一つの場所に留まることができず、現実の問題から逃げ続ける「永遠の放浪者」になる恐れがあります。',   group:'mid',  quote:'「私は、私に起こったことではなく、私が選択したものになる。」' },
+    sage:      { title:'賢者 (Sage)',              desc:'真実と知識を追求し、世界を客観的・論理的に理解しようとするアーキタイプです。感情に流されず、深い洞察力をもって事物の本質を見ぬく力を持っています。',             shadowName:'冷酷なる傲慢と逃避',       shadowDesc:'共感性を失い、すべてを理屈で正当化する冷酷さや、行動を起こさず知識の世界に逃避する傾向があります。', group:'slow', quote:'「外を見る者は夢を見る。内を見る者は目覚める。」' },
+    hero:      { title:'英雄 (Hero)',              desc:'目標を達成し、困難を乗り越えることで自らの価値を証明しようとするアーキタイプです。逆境において最も力を発揮し、弱者を守るための勇気と行動力を持ちます。',             shadowName:'戦いを求める暴君',         shadowDesc:'他者の弱さを許容できず、常に戦いを求めて傲慢な暴君となるか、無意味な戦いで自滅する傾向があります。', group:'fast', quote:'「あなたの恐れがある場所にこそ、あなたの課題がある。」' },
+    outlaw:    { title:'無法者 (Outlaw)',          desc:'既存のルールや古い体制を破壊し、根本的な変革をもたらすアーキタイプです。社会の矛盾や理不尽に対して反逆し、ゼロから新しいものを構築するエネルギーを持ちます。',     shadowName:'全てを壊す虚無主義',       shadowDesc:'建設的な目的を見失い、ただ壊すこと自体に快感を覚える破壊衝動や虚無主義に陥る危険性があります。',   group:'fast', quote:'「天国まで枝を伸ばすには、根を地獄まで降ろさなければならない。」' },
+    magician:  { title:'魔術師 (Magician)',        desc:'事物の根本的な法則を直感的に理解し、自身のビジョンを現実化させるアーキタイプです。相反する要素を統合し、状況を根本から変容（シフト）させる力を持ちます。',         shadowName:'他者を操る黒魔術',         shadowDesc:'己の直感や能力を過信し、他者を都合よく操作しようとする「詐欺師」や「黒魔術」的な側面に転じる恐れがあります。', group:'mid', quote:'「無意識を意識化しない限り、それはあなたの人生を支配し、あなたはそれを運命と呼ぶだろう。」' },
+    everyman:  { title:'一般人 (Everyman)',        desc:'他者との平等な繋がりや、コミュニティへの帰属を求めるアーキタイプです。特別な存在になることよりも、地に足のついた日常や、人々との連帯感を重んじます。',             shadowName:'責任放棄と被害者意識',     shadowDesc:'目立つことや自立を恐れ、集団の意見に無批判に同調したり、自らの責任を放棄する被害者意識に陥りやすくなります。', group:'slow', quote:'「孤独とは人が周りにいないことではなく、自分にとって重要なことを伝えられないことから生じる。」' },
+    lover:     { title:'恋人 (Lover)',             desc:'親密さ、美、情熱を重んじ、他者や物事と深い関係を築こうとするアーキタイプです。五感が豊かで、対象の魅力を最大限に引き出す力を持っています。',                     shadowName:'執着と嫉妬の依存',         shadowDesc:'見捨てられることを極度に恐れ、対象への強い執着や嫉妬心を抱き、自己を見失う「依存」に陥る危険性があります。', group:'mid', quote:'「二つの人格の出会いは、二つの化学物質の接触のようなものだ。少しでも反応があれば、両者とも変容する。」' },
+    jester:    { title:'道化師 (Jester)',          desc:'ユーモアと遊び心で今この瞬間を楽しみ、周囲に活力を与えるアーキタイプです。硬直したルールを笑い飛ばし、深刻すぎる状況に風穴を開ける役割を持ちます。',             shadowName:'痛みを直視せぬ不誠実',     shadowDesc:'人生の重大な問題から目を背け、すべてを茶化して責任を取ろうとしない不誠実さに繋がる恐れがあります。',   group:'fast', quote:'「すべての混沌には宇宙があり、すべての無秩序には秘密の秩序がある。」' },
+    caregiver: { title:'援助者 (Caregiver)',       desc:'他者を保護し、育成し、思いやりを持って奉仕するアーキタイプです。高い共感力を持ち、周囲の人々にとって安心できる安全網（セーフティネット）として機能します。',     shadowName:'自立を奪う支配的な愛',     shadowDesc:'「他者を助けること」に過度に依存し、相手の自立を妨げる過干渉や共依存の関係を作り出してしまう危険性があります。', group:'slow', quote:'「自分自身の闇を知ることこそ、他人の闇に対処するための最良の方法である。」' },
+    creator:   { title:'創造者 (Creator)',         desc:'想像力を形にし、永続する価値や新しいものを生み出すアーキタイプです。自己表現の欲求が強く、独自の美学やビジョンを現実の世界で具現化しようとします。',                 shadowName:'自己破壊的な完璧主義',     shadowDesc:'自身のビジョンに執着するあまり、思い通りにならない現実に対して激しい怒りを抱く「自己破壊的な完璧主義」に陥りやすくなります。', group:'mid', quote:'「新しいものの創造は知性によってではなく、内的欲求から働く遊びの衝動によって達成される。」' },
+    ruler:     { title:'支配者 (Ruler)',           desc:'秩序と構造を作り出し、コミュニティや組織をコントロールするリーダーのアーキタイプです。責任感が強く、全体の利益のために安定した環境を構築する能力を持ちます。',         shadowName:'全てを抑圧する偏執狂',     shadowDesc:'コントロールを失うことへの恐怖から、他者の意見を許容できず、権力によってすべてを抑圧するパラノイア（偏執狂）に陥る危険性があります。', group:'fast', quote:'「あなたが抵抗するものは、持続する。」' }
 };
 
-let currentHighestType = null, currentTimeTrait = "", currentTimeGroup = "";
+let currentHighestType = null, currentTimeTrait = '', currentTimeGroup = '';
+
+function getTopArchetypes(limit = 3) {
+    return Object.keys(scores)
+        .map(type => ({ type, score: scores[type] || 0, data: archetypeData[type] }))
+        .sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            const bRecent = [...choiceHistory].reverse().findIndex(i => i.type === b.type);
+            const aRecent = [...choiceHistory].reverse().findIndex(i => i.type === a.type);
+            return aRecent - bRecent;
+        })
+        .slice(0, limit);
+}
+
+function resolveDominantArchetype() {
+    const topScore = Math.max(...Object.values(scores));
+    let candidates = Object.keys(scores).filter(t => scores[t] === topScore);
+    if (candidates.length === 1) return candidates[0];
+    const timeMatched = candidates.filter(t => archetypeData[t].group === currentTimeGroup);
+    if (timeMatched.length > 0) candidates = timeMatched;
+    if (candidates.length === 1) return candidates[0];
+    let bestType = candidates[0], bestFloor = -1, bestOrder = -1;
+    candidates.forEach(type => {
+        const hits = choiceHistory.filter(i => i.type === type);
+        const floorDepth = hits.length ? Math.max(...hits.map(i => i.floor)) : -1;
+        const recentOrder = hits.length ? Math.max(...hits.map(i => i.order)) : -1;
+        if (floorDepth > bestFloor || (floorDepth === bestFloor && recentOrder > bestOrder)) {
+            bestType = type; bestFloor = floorDepth; bestOrder = recentOrder;
+        }
+    });
+    return bestType;
+}
+
+function buildSubtypeHtml() {
+    const topThree = getTopArchetypes(3);
+    // TOP（主旋律）を除いた2つを名前のみ表示
+    const subtypes = topThree.slice(1, 3);
+    if (subtypes.length === 0) return '<div class="subtype-item">データなし</div>';
+    return subtypes.map((entry, i) => {
+        const badge = i === 0 ? '副旋律' : '残響';
+        return `<div class="subtype-item"><strong>${badge}：${entry.data.title}</strong></div>`;
+    }).join('');
+}
+
+// ─────────────────────────────────────────────
+// 三幕制ラスボス戦闘システム
+// ─────────────────────────────────────────────
+const BATTLE_ROUNDS_DEF = [
+    {
+        phase: '第一幕：影の出現',
+        buildText: (bossName, heroTitle) =>
+            `第三層の扉が閉ざされ、深淵に重い足音が響く。\n` +
+            `あなたの魂から切り離された影の名は──\n` +
+            `【<span class="battle-highlight">${bossName}</span>】\n\n` +
+            `それはあなたのすべての弱さを知り、最初の圧力を解き放った。`,
+        choices: [
+            { text: '真正面に立ち、影の第一撃を全て受け止める', group: 'slow' },
+            { text: '剣を構え、躊躇なく先手の斬撃を叩き込む', group: 'fast' },
+            { text: '影の出方を冷静に観察し、最適な間合いを測る', group: 'mid' },
+            { text: '影に語りかけ、その怒りの根源を問い質す', group: 'slow' }
+        ]
+    },
+    {
+        phase: '第二幕：深淵の反撃',
+        buildText: (bossName) =>
+            `【<span class="battle-highlight">${bossName}</span>】が変貌した。\n` +
+            `あなたの過去の痛みが武器となり、核心を狙ってくる。\n\n` +
+            `── 反撃の波が押し寄せる。`,
+        choices: [
+            { text: '攻撃を盾で受け流し、消耗戦に持ち込む', group: 'slow' },
+            { text: '反撃の激流に逆らい、さらに強い力で押し返す', group: 'fast' },
+            { text: '変貌の法則を瞬時に解析し、逆手に取る', group: 'mid' },
+            { text: '痛みを受け入れ、己の核心をより深く刻み直す', group: 'slow' }
+        ]
+    },
+    {
+        phase: '第三幕：魂の決断',
+        buildText: (bossName) =>
+            `二つの魂が深淵の中で交差する。\n` +
+            `【<span class="battle-highlight">${bossName}</span>】は最後の問いを突きつけた。\n` +
+            `「お前は本当に、私を必要としないのか？」\n\n` +
+            `── 最終の交錯。ここで全てが決まる。`,
+        choices: [
+            { text: '「お前は私の一部だ。共に在れ」と宣言し、統合する', group: 'mid' },
+            { text: '全ての力を解放し、渾身の最後の一撃を放つ', group: 'fast' },
+            { text: '静かに目を閉じ、影の全てを自分の内に迎え入れる', group: 'slow' },
+            { text: 'これまでの旅の意味を語り、影の選択に委ねる', group: 'mid' }
+        ]
+    }
+];
+
+let battleRound = 0;
+let battleWins  = 0;
+let battleData  = null;
 
 function startFinalBattle() {
     playSound('battle');
-    
+    startBattleBgm();
+    battleRound = 0;
+    battleWins  = 0;
+
     transitionTo('battle-ui', () => {
-        currentHighestType = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
-        let data = archetypeData[currentHighestType];
-        
-        let avgTime = decisionTimes.length > 0 ? (decisionTimes.reduce((a,b)=>a+b, 0) / decisionTimes.length) : 20000;
-        let avgSec = (avgTime / 1000).toFixed(1);
+        let avgTime = decisionTimes.length > 0
+            ? decisionTimes.reduce((a,b)=>a+b,0) / decisionTimes.length
+            : 20000;
+        if      (avgTime < 12000) { currentTimeTrait = '直感と電光石火の速さ';   currentTimeGroup = 'fast'; }
+        else if (avgTime > 28000) { currentTimeTrait = '深き熟考と慎重なる歩み'; currentTimeGroup = 'slow'; }
+        else                      { currentTimeTrait = '柔軟なる間合いと立ち回り'; currentTimeGroup = 'mid'; }
 
-        if (avgTime < 12000) { 
-            currentTimeTrait = "直感と電光石火の速さ（12秒未満）"; currentTimeGroup = "fast"; 
-        } else if (avgTime > 28000) { 
-            currentTimeTrait = "深き熟考と慎重なる歩み（28秒以上）"; currentTimeGroup = "slow"; 
-        } else { 
-            currentTimeTrait = "20秒前後の柔軟なる間合いと立ち回り"; currentTimeGroup = "mid"; 
-        }
+        currentHighestType = resolveDominantArchetype();
+        battleData = archetypeData[currentHighestType];
 
-        let battleText = `鉄の扉を抜けた先。巨大な空間の底で、重厚な足音が響く。
-あなたが無意識の底に切り捨てた影、【<span class="battle-highlight">${data.shadowName}</span>】の具現が立ち塞がった。
-
-`;
-        battleText += `【魂の軌跡】
-`;
-        battleText += `迷宮でのあなたの決断平均時間は ${avgSec}秒。
-その『<span class="battle-highlight">${currentTimeTrait}</span>』が、あなたの自我（エゴ）の核となっている。
-
-`;
-        battleText += `さあ、名もなき彷徨い人よ。
-この絶望の影に対して、どう立ち向かう。`;
-
-        document.getElementById('battle-text').innerHTML = battleText;
-        
-        let battleChoices = [
-            { text: "武器を構え、影の主を力と意志でねじ伏せる", group: "fast" },
-            { text: "影の嘆きを受け入れ、盾を捨ててその刃を身に受ける", group: "slow" },
-            { text: "影の攻撃パターンを冷静に見切り、致命の隙を突く", group: "slow" },
-            { text: "影の力を利用し、自らの魔術の糧として吸収する", group: "mid" }
-        ];
-
-        let choicesEl = document.getElementById('battle-choices');
-        choicesEl.innerHTML = '';
-        battleChoices.forEach(c => {
-            let btn = document.createElement('button'); btn.className = 'btn-choice'; btn.innerText = c.text;
-            btn.onclick = () => resolveFinalBattle(c.group);
-            choicesEl.appendChild(btn);
-        });
+        showBattleRound(0);
     });
 }
 
-function resolveFinalBattle(finalChoiceGroup) {
-    let data = archetypeData[currentHighestType];
-    let winPoints = (scores[currentHighestType] >= 2) ? 1 : 0; 
-    
-    if (data.group === currentTimeGroup) winPoints++;
-    if (data.group === finalChoiceGroup) winPoints++;
-    let isVictory = (winPoints >= 2);
+function updateRoundBar(round, wins) {
+    for (let i = 0; i < 3; i++) {
+        const pip = document.getElementById(`pip-${i}`);
+        if (!pip) continue;
+        pip.className = 'round-pip';
+        if      (i < round)  pip.classList.add(/* win/loss tracked below */ 'win');
+        if      (i === round) pip.classList.add('active');
+    }
+    // Re-colour completed pips based on win/loss (stored in battleWinLog)
+}
+
+let battleWinLog = [];
+
+function showBattleRound(round) {
+    const rDef = BATTLE_ROUNDS_DEF[round];
+    const bossName = battleData.shadowName;
+
+    // Update status header
+    document.getElementById('battle-status').innerText =
+        `【 ${rDef.phase} 】  ${battleWins}勝 / ${round}戦`;
+
+    // Update round pips
+    for (let i = 0; i < 3; i++) {
+        const pip = document.getElementById(`pip-${i}`);
+        if (!pip) continue;
+        pip.className = 'round-pip';
+        if (i < round) {
+            pip.classList.add(battleWinLog[i] ? 'win' : 'lose');
+        } else if (i === round) {
+            pip.classList.add('active');
+        }
+    }
+
+    document.getElementById('battle-text').innerHTML = rDef.buildText(bossName, battleData.title);
+
+    const bChoicesEl = document.getElementById('battle-choices');
+    bChoicesEl.innerHTML = '';
+    shuffleArray(rDef.choices).forEach(c => {
+        let btn = document.createElement('button');
+        btn.className = 'btn-choice';
+        btn.innerText = c.text;
+        btn.onclick = () => handleBattleRound(c.group);
+        bChoicesEl.appendChild(btn);
+    });
+}
+
+function handleBattleRound(choiceGroup) {
+    const win = (choiceGroup === battleData.group);
+    if (win) battleWins++;
+    battleWinLog[battleRound] = win;
+
+    const resultMsg = win
+        ? `【優勢】影がひるんだ。この局面はあなたの勝ちだ。\n次の幕へ進め。`
+        : `【劣勢】影の一撃を受けた。しかし戦いはまだ続く。`;
+
+    document.getElementById('battle-text').textContent = resultMsg;
+    const bChoicesEl = document.getElementById('battle-choices');
+    bChoicesEl.innerHTML = '';
+
+    battleRound++;
+
+    if (battleRound < 3) {
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'btn-choice';
+        nextBtn.innerText = `次の幕へ（${battleWins}勝 / ${battleRound}戦）`;
+        nextBtn.onclick = () => {
+            const wrapper = document.getElementById('main-wrapper');
+            wrapper.classList.add('fade-out');
+            setTimeout(() => {
+                wrapper.classList.remove('fade-out');
+                showBattleRound(battleRound);
+            }, 280);
+        };
+        bChoicesEl.appendChild(nextBtn);
+    } else {
+        const endBtn = document.createElement('button');
+        endBtn.className = 'btn-choice';
+        endBtn.innerText = `決着を見届ける（${battleWins}勝 / 3戦）`;
+        endBtn.onclick = resolveFinalBattle;
+        bChoicesEl.appendChild(endBtn);
+    }
+}
+
+function resolveFinalBattle() {
+    const isVictory = battleWins >= 2;
+    const data = battleData;
 
     transitionTo('result-ui', () => {
-        let titleEl = document.getElementById('res-title');
+        startResultBgm();
+        let titleEl     = document.getElementById('res-title');
         let narrativeEl = document.getElementById('res-narrative');
 
         if (isVictory) {
             document.body.classList.add('victory-theme');
-            titleEl.innerText = "【 自己の統合 (INTEGRATION) 】"; titleEl.className = "result-title victory-title";
-            narrativeEl.innerText = `見事だ。あなたは影を打ち倒し、その魂を自らのものとして統合した。
-これまでの選択と決断のペースが「${data.title}」としての確固たる自我を築き上げていたのだ。
-深淵の森は開かれ、あなたは「真の自己（セルフ）」という確かな光を持って現実へと帰還する。`;
+            titleEl.innerText = '【 自己の統合 (INTEGRATION) 】';
+            titleEl.className = 'result-title victory-title';
+            narrativeEl.innerText =
+                `三幕の戦いで${battleWins}勝を収め、あなたは「${data.title}」として影を統合した。\n` +
+                `選択傾向・決断速度・三つの幕での立ち回りが共鳴し、深淵はもはや敵ではなく、己を支える核へと変わった。`;
         } else {
             document.body.classList.remove('victory-theme');
-            titleEl.innerText = "【 自我の喪失 (DISSOLUTION) 】"; titleEl.className = "result-title defeat-title";
-            narrativeEl.innerText = `影の圧倒的な一撃の前に、あなたの自我は砕け散った。
-選択の迷いか、ペースの不一致か。己の本質を見誤った自我は、深淵の森の泥と同化し、影として彷徨うこととなる。
-だが、心の深層はまだ閉じられてはいない。己の影を理解するまで、何度でも立ち上がれ。`;
+            titleEl.innerText = '【 自我の喪失 (DISSOLUTION) 】';
+            titleEl.className = 'result-title defeat-title';
+            narrativeEl.innerText =
+                `三幕中${battleWins}勝。あと一歩のところで魂の軸が噛み合わなかった。\n` +
+                `「${data.title}」の資質は確かにある。だが影との対峙にまだ迷いが残る。\n` +
+                `何度でも立ち上がり、深淵へ戻れ。`;
         }
 
-        document.getElementById('res-desc').innerHTML = `<span style="color:var(--accent-color); font-weight:bold; font-size:1.1rem;">【 ${data.title} 】</span><br><br>${data.desc}`;
-        document.getElementById('res-shadow').innerHTML = `<span style="color:var(--accent-red); font-weight:bold; font-size:1.1rem;">【 ${data.shadowName} 】</span><br><br>${data.shadowDesc}`;
+        document.getElementById('res-desc').innerHTML =
+            `<span style="color:var(--accent-color); font-weight:bold; font-size:1.1rem;">【 ${data.title} 】</span><br><br>${data.desc}`;
+        document.getElementById('res-shadow').innerHTML =
+            `<span style="color:var(--accent-red); font-weight:bold; font-size:1.1rem;">【 ${data.shadowName} 】</span><br><br>${data.shadowDesc}`;
+        document.getElementById('res-subtypes').innerHTML = buildSubtypeHtml();
         document.getElementById('res-quote').innerText = data.quote;
+        drawRadarChart();
     });
+}
+
+// ─────────────────────────────────────────────
+// タイプライター
+// ─────────────────────────────────────────────
+let _twTimer = null, _twDone = null;
+
+function cancelTypewriter() {
+    if (_twTimer) { clearTimeout(_twTimer); _twTimer = null; }
+    _twDone = null;
+    ['story-text','battle-text'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('typing-cursor');
+    });
+}
+
+function skipTypewriter() {
+    if (!_twDone) return;
+    clearTimeout(_twTimer); _twTimer = null;
+    const done = _twDone; _twDone = null;
+    done();
+}
+
+function typeWriter(el, text, ms, done) {
+    cancelTypewriter();
+    el.textContent = '';
+    el.classList.add('typing-cursor');
+    let i = 0;
+    const finish = () => {
+        el.classList.remove('typing-cursor');
+        el.textContent = text;
+        _twDone = null; _twTimer = null;
+        if (done) done();
+    };
+    _twDone = finish;
+    const tick = () => {
+        if (i < text.length) { el.textContent += text[i++]; _twTimer = setTimeout(tick, ms); }
+        else finish();
+    };
+    tick();
+}
+
+// ─────────────────────────────────────────────
+// レーダーチャート
+// ─────────────────────────────────────────────
+const radarTypes  = ['hero','outlaw','ruler','jester','creator','lover','everyman','caregiver','magician','sage','explorer','innocent'];
+const radarLabels = ['英雄','無法者','支配者','道化師','創造者','恋人','一般人','援助者','魔術師','賢者','探求者','無垢'];
+
+function drawRadarChart() {
+    const canvas = document.getElementById('radar-chart');
+    if (!canvas) return;
+    const rc = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const cx = W/2, cy = H/2;
+    const maxR = Math.min(cx, cy) - 28;
+    const n = radarTypes.length;
+    const step = (Math.PI * 2) / n;
+    const topScore = Math.max(...Object.values(scores), 1);
+
+    rc.clearRect(0, 0, W, H);
+
+    for (let ring = 1; ring <= 4; ring++) {
+        rc.beginPath();
+        for (let i = 0; i <= n; i++) {
+            const a = -Math.PI/2 + i*step;
+            const r = maxR * ring / 4;
+            i === 0 ? rc.moveTo(cx + r*Math.cos(a), cy + r*Math.sin(a))
+                    : rc.lineTo(cx + r*Math.cos(a), cy + r*Math.sin(a));
+        }
+        rc.closePath();
+        rc.strokeStyle = 'rgba(74,94,61,0.35)'; rc.lineWidth = 0.5; rc.stroke();
+    }
+
+    for (let i = 0; i < n; i++) {
+        const a = -Math.PI/2 + i*step;
+        rc.beginPath(); rc.moveTo(cx, cy);
+        rc.lineTo(cx + maxR*Math.cos(a), cy + maxR*Math.sin(a));
+        rc.strokeStyle = 'rgba(74,94,61,0.3)'; rc.lineWidth = 0.5; rc.stroke();
+    }
+
+    rc.beginPath();
+    for (let i = 0; i < n; i++) {
+        const a = -Math.PI/2 + i*step;
+        const v = (scores[radarTypes[i]] || 0) / topScore;
+        i === 0 ? rc.moveTo(cx + maxR*v*Math.cos(a), cy + maxR*v*Math.sin(a))
+                : rc.lineTo(cx + maxR*v*Math.cos(a), cy + maxR*v*Math.sin(a));
+    }
+    rc.closePath();
+    rc.fillStyle = 'rgba(197,169,99,0.18)'; rc.fill();
+    rc.strokeStyle = '#c5a963'; rc.lineWidth = 1.5; rc.stroke();
+
+    for (let i = 0; i < n; i++) {
+        const a = -Math.PI/2 + i*step;
+        const sc = scores[radarTypes[i]] || 0;
+        const v = sc / topScore;
+        if (sc > 0) {
+            rc.beginPath();
+            rc.arc(cx + maxR*v*Math.cos(a), cy + maxR*v*Math.sin(a), 3, 0, Math.PI*2);
+            rc.fillStyle = '#c5a963'; rc.fill();
+        }
+        const lx = cx + (maxR + 22) * Math.cos(a);
+        const ly = cy + (maxR + 22) * Math.sin(a);
+        const isTop = sc === topScore && sc > 0;
+        rc.fillStyle = isTop ? '#c5a963' : 'rgba(117,116,106,0.85)';
+        rc.font = `${isTop ? 'bold ' : ''}9px "Hiragino Mincho ProN", serif`;
+        rc.textAlign = 'center'; rc.textBaseline = 'middle';
+        rc.fillText(radarLabels[i], lx, ly);
+    }
 }
 </script>
 </body>
