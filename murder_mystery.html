@@ -829,9 +829,13 @@
 
     // 試すモデルのリスト（順番に試す）
     const GEMINI_MODELS = [
+        'gemini-2.0-flash-exp',
         'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-8b',
         'gemini-1.5-pro',
-        'gemini-1.0-pro',
+        'gemini-pro',
     ];
 
     async function callGemini(prompt) {
@@ -866,7 +870,14 @@
                 lastError = e;
             }
         }
-        throw lastError || new Error('利用可能なモデルが見つかりませんでした');
+        throw new Error(
+            'すべてのモデルで接続に失敗しました。\n' +
+            '以下をご確認ください:\n' +
+            '① APIキーが正しいか (aistudio.google.com でコピー直後のもの)\n' +
+            '② Google AI Studio でキーを作ったプロジェクトの「Generative Language API」が有効か\n' +
+            '③ 無料枠の上限を超えていないか\n\n' +
+            '最後のエラー: ' + (lastError?.message || '不明')
+        );
     }
 
     function parseJsonFromText(text, label) {
