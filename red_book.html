@@ -1490,8 +1490,8 @@ function startFinalBattle() {
             ? decisionTimes.reduce((a,b)=>a+b,0) / decisionTimes.length
             : 20000;
         if      (avgTime < 12000) { currentTimeTrait = '直感と電光石火の速さ';   currentTimeGroup = 'fast'; }
-        else if (avgTime > 28000) { currentTimeTrait = '深き熟考と慎重なる歩み'; currentTimeGroup = 'slow'; }
-        else                      { currentTimeTrait = '柔軟なる間合いと立ち回り'; currentTimeGroup = 'mid'; }
+        else if (avgTime < 18000) { currentTimeTrait = '柔軟なる間合いと立ち回り'; currentTimeGroup = 'mid'; }
+        else                      { currentTimeTrait = '深き熟考と慎重なる歩み'; currentTimeGroup = 'slow'; }
 
         currentHighestType = resolveDominantArchetype();
         battleData = archetypeData[currentHighestType];
