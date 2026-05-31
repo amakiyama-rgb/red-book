@@ -204,6 +204,64 @@
         .btn-move:hover { background: rgba(74,94,61,0.15); color: var(--accent-color); border-color: var(--wire-green); }
         .btn-move:active { background: var(--wire-green); color: #fff; transform: scale(0.95); }
 
+        /* 選択肢選択アニメ */
+        .btn-choice.choice-selected {
+            background: var(--wire-green) !important;
+            color: #fff !important;
+            border-color: var(--wire-green) !important;
+            transform: translateY(-1px) !important;
+            pointer-events: none;
+        }
+
+        /* 音量コントロール */
+        .volume-wrap {
+            position: absolute; top: 15px; right: 58px;
+            display: flex; align-items: center; gap: 5px; z-index: 100;
+        }
+        .vol-icon { font-size: 0.75rem; color: var(--text-muted); }
+        .volume-slider {
+            -webkit-appearance: none; appearance: none;
+            width: 60px; height: 3px;
+            background: var(--border-color); border-radius: 2px;
+            cursor: pointer; outline: none;
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 11px; height: 11px; border-radius: 50%;
+            background: var(--wire-green); cursor: pointer;
+        }
+        .volume-slider::-moz-range-thumb {
+            width: 11px; height: 11px; border-radius: 50%;
+            background: var(--wire-green); cursor: pointer; border: none;
+        }
+
+        /* タップでスキップ */
+        .tap-skip {
+            text-align: center; font-size: 0.72rem; color: var(--text-muted);
+            letter-spacing: 1px; margin-top: -20px; margin-bottom: 15px;
+            opacity: 0; transition: opacity 0.5s; cursor: pointer;
+        }
+        .tap-skip.visible { opacity: 1; }
+
+        /* ミニマップ凡例 */
+        .minimap-legend {
+            font-size: 0.6rem; color: var(--text-muted);
+            text-align: right; margin-top: 4px;
+            letter-spacing: 0.5px; line-height: 1.6;
+        }
+
+        /* シェアボタン */
+        .btn-share {
+            display: block; margin: 8px auto 0;
+            background: transparent; color: var(--wire-green);
+            border: 1px solid var(--wire-green);
+            padding: 10px 22px; font-size: 0.88rem;
+            cursor: pointer; font-family: inherit; letter-spacing: 1px;
+            border-radius: 4px; transition: all 0.25s;
+        }
+        .btn-share:hover { background: var(--wire-green); color: #fff; }
+        .btn-share.copied { background: var(--wire-green); color: #fff; pointer-events: none; }
+
         .result-title {
             font-size: 1.4rem;
             text-align: center;
@@ -401,6 +459,10 @@
 
 <div class="game-container">
     <div id="game-top"></div>
+    <div class="volume-wrap">
+        <span class="vol-icon">🔈</span>
+        <input type="range" class="volume-slider" id="vol-slider" min="0" max="1" step="0.05" value="0.8" oninput="setVolume(this.value)">
+    </div>
     <button class="btn-mute" id="mute-btn" onclick="toggleMute()" title="サウンドON/OFF">🔊</button>
 
     <div id="audio-overlay">
@@ -439,6 +501,12 @@
                 <canvas id="view3d" width="320" height="320"></canvas>
                 <canvas id="minimap" width="88" height="88"></canvas>
             </div>
+            <div class="minimap-legend" id="minimap-legend">
+                <span style="color:#9f2c2c">◆</span>記憶&nbsp;
+                <span style="color:#705e3d">◆</span>影&nbsp;
+                <span style="color:#3f4655">◆</span>遺物&nbsp;
+                <span style="color:#6b3a1a">◆</span>敵
+            </div>
             <div class="controls">
                 <button class="btn-move" onclick="turn(-1)">↰ 左</button>
                 <button class="btn-move" onclick="moveForward()">↑ 前進</button>
@@ -449,7 +517,8 @@
         <!-- イベント画面 -->
         <div id="story-ui">
             <div class="dungeon-status" id="event-title"></div>
-            <div id="story-text" class="story-text"></div>
+            <div id="story-text" class="story-text" onclick="skipTypewriter()"></div>
+            <div class="tap-skip" id="tap-skip">▼ タップでスキップ</div>
             <div id="choices-area" class="choices-container"></div>
         </div>
 
@@ -494,7 +563,9 @@
             <div id="res-quote" class="quote-section"></div>
 
             <div style="text-align: center; margin-top: 30px;">
-                <button class="btn-start" onclick="restartGame()">森の入り口へ戻る（最初から）</button>
+                <button class="btn-share" id="share-btn" onclick="shareResult()">結果をコピーしてシェア</button>
+                <br>
+                <button class="btn-start" style="margin-top: 14px;" onclick="restartGame()">森の入り口へ戻る（最初から）</button>
             </div>
         </div>
     </div>
@@ -507,6 +578,8 @@
 let audioCtx = null;
 let isMuted = false;
 let bgmOscs = [], bgmGains = [], bgmTimer = null, bgmArpIdx = 0;
+let masterVolGain = null;
+let masterVolume = 0.8;
 
 function toggleMute() {
     isMuted = !isMuted;
@@ -523,8 +596,16 @@ function initAudio() {
         const Ctx = window.AudioContext || window.webkitAudioContext;
         if (!Ctx) return;
         audioCtx = new Ctx();
+        masterVolGain = audioCtx.createGain();
+        masterVolGain.gain.value = masterVolume;
+        masterVolGain.connect(audioCtx.destination);
         if (isMuted) audioCtx.suspend();
     } catch(e) { console.warn('Audio failed:', e); audioCtx = null; }
+}
+
+function setVolume(val) {
+    masterVolume = parseFloat(val);
+    if (masterVolGain) masterVolGain.gain.value = masterVolume;
 }
 
 function playSound(type) {
@@ -594,7 +675,7 @@ function startFloorBgm(floorIndex) {
     const master = audioCtx.createGain();
     master.gain.setValueAtTime(0, audioCtx.currentTime);
     master.gain.linearRampToValueAtTime(0.9, audioCtx.currentTime + 2.2);
-    master.connect(audioCtx.destination);
+    master.connect(masterVolGain || audioCtx.destination);
     bgmGains.push(master);
 
     const drone = audioCtx.createOscillator();
@@ -645,7 +726,7 @@ function startBattleBgm() {
     const master = audioCtx.createGain();
     master.gain.setValueAtTime(0, audioCtx.currentTime);
     master.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 2.5);
-    master.connect(audioCtx.destination);
+    master.connect(masterVolGain || audioCtx.destination);
     bgmGains.push(master);
 
     const drone = audioCtx.createOscillator();
@@ -694,7 +775,7 @@ function startResultBgm() {
     const master = audioCtx.createGain();
     master.gain.setValueAtTime(0, audioCtx.currentTime);
     master.gain.linearRampToValueAtTime(0.85, audioCtx.currentTime + 3);
-    master.connect(audioCtx.destination);
+    master.connect(masterVolGain || audioCtx.destination);
     bgmGains.push(master);
     [[130.81, 0.05], [164.81, 0.042], [196, 0.042], [261.63, 0.036]].forEach(([f, v]) => {
         const osc = audioCtx.createOscillator();
@@ -991,9 +1072,12 @@ function getFloorLabel(index = currentFloor) { return `第${index + 1}層`; }
 function updateDungeonStatus(extra = '') {
     const filled = '◆'.repeat(crystals);
     const empty  = '◇'.repeat(3 - crystals);
-    const floorState = floorCrystalCollected[currentFloor] ? '結晶回収済' : '結晶未回収';
+    const fState = floorEventState[currentFloor];
+    const evIcons = fState
+        ? `${fState.crystalDone ? '◆' : '◇'}記 ${fState.npcDone ? '◆' : '◇'}影 ${fState.chestDone ? '◆' : '◇'}遺`
+        : '';
     document.getElementById('dungeon-status').innerText =
-        `${getFloorLabel()} | 記憶の結晶 ${filled}${empty} | 層の残響：${extra || floorState}`;
+        `${getFloorLabel()} | ${filled}${empty} | ${evIcons}`;
 }
 
 function placeEventTile(floorMap, tileValue) {
@@ -1186,9 +1270,54 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
+function initSwipe() {
+    const el = document.getElementById('view3d');
+    if (!el) return;
+    let sx = 0, sy = 0;
+    el.addEventListener('touchstart', e => {
+        sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+        e.preventDefault();
+    }, { passive: false });
+    el.addEventListener('touchend', e => {
+        if (document.getElementById('dungeon-ui').style.display === 'none') return;
+        const dx = e.changedTouches[0].clientX - sx;
+        const dy = e.changedTouches[0].clientY - sy;
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (Math.abs(dx) > 28) dx > 0 ? turn(1) : turn(-1);
+        } else {
+            if (dy < -28) moveForward();
+        }
+    }, { passive: true });
+}
+
+function shareResult() {
+    const data = archetypeData[currentHighestType];
+    const text =
+        `【深層迷宮：赤の書】\n` +
+        `メイン原型：${data.title}\n` +
+        `シャドウ：${data.shadowName}\n` +
+        `#深層迷宮赤の書`;
+    const btn = document.getElementById('share-btn');
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+            btn.innerText = 'コピーしました！'; btn.classList.add('copied');
+            setTimeout(() => { btn.innerText = '結果をコピーしてシェア'; btn.classList.remove('copied'); }, 2200);
+        });
+    } else {
+        // フォールバック
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        btn.innerText = 'コピーしました！'; btn.classList.add('copied');
+        setTimeout(() => { btn.innerText = '結果をコピーしてシェア'; btn.classList.remove('copied'); }, 2200);
+    }
+}
+
 function showPrologue() {
     try { initAudio(); } catch(e) {}
     initCanvas();
+    initSwipe();
     resetGameState();
     document.getElementById('audio-overlay').style.display = 'none';
     document.getElementById('prologue-ui').style.display = 'block';
@@ -1223,6 +1352,14 @@ function moveForward() {
 
 function markCurrentTileCleared() { getActiveMap()[py][px] = 0; }
 
+function lockChoices(selectedBtn) {
+    document.querySelectorAll('#choices-area .btn-choice').forEach(b => {
+        b.disabled = true;
+        b.style.opacity = b === selectedBtn ? '1' : '0.35';
+    });
+    selectedBtn.classList.add('choice-selected');
+}
+
 function renderChoices(choices, eventKey) {
     let choicesEl = document.getElementById('choices-area');
     choicesEl.innerHTML = '';
@@ -1232,6 +1369,7 @@ function renderChoices(choices, eventKey) {
         btn.className = 'btn-choice';
         btn.innerText = c.text;
         btn.onclick = () => {
+            lockChoices(btn);
             let timeTaken = Date.now() - decisionStartTime;
             decisionTimes.push(timeTaken);
             scores[c.type]++;
@@ -1246,9 +1384,9 @@ function renderChoices(choices, eventKey) {
                 floorEventState[currentFloor].chestDone = true;
             }
             markCurrentTileCleared();
-            updateDungeonStatus(floorEventState[currentFloor].floorName);
+            updateDungeonStatus();
             playSound('step');
-            transitionTo('dungeon-ui', drawView);
+            setTimeout(() => transitionTo('dungeon-ui', drawView), 320);
         };
         choicesEl.appendChild(btn);
     });
@@ -1263,6 +1401,7 @@ function renderEnemyChoices(enemyData) {
         btn.className = 'btn-choice';
         btn.innerText = c.text;
         btn.onclick = () => {
+            lockChoices(btn);
             let timeTaken = Date.now() - decisionStartTime;
             decisionTimes.push(timeTaken);
             scores[c.type]++;
@@ -1627,6 +1766,8 @@ let _twTimer = null, _twDone = null;
 function cancelTypewriter() {
     if (_twTimer) { clearTimeout(_twTimer); _twTimer = null; }
     _twDone = null;
+    const hint = document.getElementById('tap-skip');
+    if (hint) hint.classList.remove('visible');
     ['story-text','battle-text'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.remove('typing-cursor');
@@ -1644,10 +1785,14 @@ function typeWriter(el, text, ms, done) {
     cancelTypewriter();
     el.textContent = '';
     el.classList.add('typing-cursor');
+    const hint = document.getElementById('tap-skip');
+    if (hint) hint.classList.add('visible');
     let i = 0;
     const finish = () => {
         el.classList.remove('typing-cursor');
         el.textContent = text;
+        const h = document.getElementById('tap-skip');
+        if (h) h.classList.remove('visible');
         _twDone = null; _twTimer = null;
         if (done) done();
     };
